@@ -19,7 +19,7 @@ USE TYPES, ONLY: MULTIPLIER_TYPE
 #ifdef WITH_MKL
   USE MKL_PARDISO
   USE MKL_CLUSTER_SPARSE_SOLVER
-#endif 
+#endif
 
 IMPLICIT NONE
 
@@ -35,13 +35,13 @@ PUBLIC SCARC_TIMINGS                           !> Call of time measurements for 
 !> Note: For input parameters in character format corresponding INTEGER type-parameters will
 !> Be introduced later to simplify inquiries
 !> ------------------------------------------------------------------------------------------------
-PUBLIC SCARC_METHOD                            !> ScaRC method 
-PUBLIC SCARC_DISCRETIZATION                    !> ScaRC discretization type 
-PUBLIC SCARC_TWOLEVEL                          !> Type of Twolevel-Krylov-method 
+PUBLIC SCARC_METHOD                            !> ScaRC method
+PUBLIC SCARC_DISCRETIZATION                    !> ScaRC discretization type
+PUBLIC SCARC_TWOLEVEL                          !> Type of Twolevel-Krylov-method
 
-PUBLIC SCARC_DEBUG                             !> Level for plotting debug information 
-PUBLIC SCARC_VERBOSE                           !> Level for plotting verbose information 
-PUBLIC SCARC_CSV                               !> Level for plotting csv information 
+PUBLIC SCARC_DEBUG                             !> Level for plotting debug information
+PUBLIC SCARC_VERBOSE                           !> Level for plotting verbose information
+PUBLIC SCARC_CSV                               !> Level for plotting csv information
 
 PUBLIC SCARC_RESIDUAL                          !> Residual of iterative solver
 PUBLIC SCARC_ITERATIONS                        !> Number of iterations
@@ -59,7 +59,7 @@ PUBLIC SCARC_MULTIGRID_LEVEL                   !> Multigrid level
 PUBLIC SCARC_MULTIGRID_ITERATIONS              !> Maximum number of iterations for multigrid method
 PUBLIC SCARC_MULTIGRID_INTERPOL                !> Interpolation method for multigrid (AMG only)
 PUBLIC SCARC_MULTIGRID_ACCURACY                !> Requested accuracy for multigrid method
-PUBLIC SCARC_MULTIGRID_CYCLE                   !> Type of multigrid cycle 
+PUBLIC SCARC_MULTIGRID_CYCLE                   !> Type of multigrid cycle
 PUBLIC SCARC_MULTIGRID_COARSENING              !> Coarsening method for multigrid (AMG only)
 
 PUBLIC SCARC_SMOOTH                            !> Smoother for multigrid method
@@ -75,12 +75,12 @@ PUBLIC SCARC_PRECON_OMEGA                      !> Relaxation parameter for preco
 PUBLIC SCARC_COARSE                            !> Coarse grid solver for multigrid method
 PUBLIC SCARC_COARSE_ITERATIONS                 !> Maximum number of iterations for coarse grid solver
 PUBLIC SCARC_COARSE_ACCURACY                   !> Requested accuracy for coarse grid solver
-PUBLIC SCARC_COARSE_OMEGA                      !> Relaxation parameter for coarse grid solver 
+PUBLIC SCARC_COARSE_OMEGA                      !> Relaxation parameter for coarse grid solver
 PUBLIC SCARC_COARSE_LEVEL                      !> Coarse grid level
 
 
 !> ------------------------------------------------------------------------------------------------
-!> Miscellaneous declarations 
+!> Miscellaneous declarations
 !> ------------------------------------------------------------------------------------------------
 !> General definitions
 CHARACTER(40) :: SCARC_METHOD   = 'NONE'                    !> Requested solver method (KRYLOV/MULTIGRID)
@@ -197,7 +197,7 @@ INTEGER, PARAMETER :: NSCARC_EXCHANGE_BASIC          =  1, &    !> initialize wa
 INTEGER, PARAMETER :: NSCARC_BROADCAST_SUM          =  1, &    !> broadcast local value and deliver sum of all
                       NSCARC_BROADCAST_PRODUCT      =  2, &    !> broadcast local value and deliver product of all
                       NSCARC_BROADCAST_MEAN         =  3, &    !> broadcast local value and deliver mean of all
-                      NSCARC_BROADCAST_FIRST        =  4, &    !> broadcast local value and deliver first 
+                      NSCARC_BROADCAST_FIRST        =  4, &    !> broadcast local value and deliver first
                       NSCARC_BROADCAST_LAST         =  5       !> broadcast local value and deliver last
 
 INTEGER, PARAMETER :: NSCARC_RELAX_JACOBI           =  1, &    !> preconditioning by JACOBI-method
@@ -238,6 +238,12 @@ INTEGER, PARAMETER :: NSCARC_CSV_NONE                =  0, &    !> don't print c
 INTEGER, PARAMETER :: NSCARC_VERBOSE_NONE            =  0, &    !> info0  level of debugging requested
                       NSCARC_VERBOSE_LESS            =  1, &    !> info0  level of debugging requested
                       NSCARC_VERBOSE_MUCH            =  2       !> info1  level of debugging requested
+
+INTEGER, PARAMETER :: NSCARC_STORAGE_CSR             =  0, &    !> CSR storage type
+                      NSCARC_STORAGE_BANDED          =  1, &    !> Banded storage type
+                      NSCARC_STORAGE_CONDENSED       =  2, &    !> Condensed storage type
+                      NSCARC_STORAGE_SWAP            =  3, &    !> Swapping storage type
+                      NSCARC_STORAGE_FREE            =  4       !> Free storage type
 
 INTEGER, PARAMETER :: NSCARC_DEBUG_NONE              =  0, &    !> info0  level of debugging requested
                       NSCARC_DEBUG_LESS              =  1, &    !> low    level of debugging requested
@@ -349,7 +355,7 @@ INTEGER, PARAMETER :: NSCARC_LEVEL_MIN               =  0, &    !> minimum multi
                       NSCARC_LEVEL_MAX               = 15, &    !> maximum multigrid level
                       NSCARC_LEVEL_SINGLE            =  1, &    !> only one grid level needed
                       NSCARC_LEVEL_MULTI             =  2, &    !> multi grid levels needed
-                      NSCARC_LEVEL_AMG               =  3       !> maximum number of grid levels 
+                      NSCARC_LEVEL_AMG               =  3       !> maximum number of grid levels
 
 INTEGER, PARAMETER :: NSCARC_DUMP_RHS                =  1, &    !> dump rhs
                       NSCARC_DUMP_PRES               =  2       !> dump pressure
@@ -421,6 +427,7 @@ LOGICAL :: BGMG        = .FALSE.         ! Geometric Multigrid-method used?
 LOGICAL :: BAMG        = .FALSE.         ! Algebraic Multigrid-method used?
 LOGICAL :: BFFT        = .FALSE.         ! FFT-method used?
 LOGICAL :: BMKL        = .FALSE.         ! MKL-method used?
+LOGICAL :: BLMKL(NN)       = .FALSE.         ! level-dependent MKL-method used?
 LOGICAL :: BTWOLEVEL   = .FALSE.         ! Method with two grid levels used?
 LOGICAL :: BMULTILEVEL = .FALSE.         ! Method with multiple grid levels used?
 LOGICAL :: BSTRUCTURED = .TRUE.          ! Structured/Unstructured discretization used?
@@ -433,7 +440,7 @@ LOGICAL :: BVERBOSE_NONE = .TRUE.        ! no verbose messages
 LOGICAL :: BVERBOSE_LESS = .FALSE.       ! less verbose messages
 LOGICAL :: BVERBOSE_MUCH = .FALSE.       ! much verbose messages
 
-LOGICAL :: BCSV_NONE   = .TRUE.          ! no csv file 
+LOGICAL :: BCSV_NONE   = .TRUE.          ! no csv file
 LOGICAL :: BCSV_MAIN   = .FALSE.         ! only main solver related csv information
 LOGICAL :: BCSV_MEDIUM = .FALSE.         ! also relaxation solver related csv information
 LOGICAL :: BCSV_FULL   = .FALSE.         ! full csv information
@@ -458,6 +465,7 @@ INTEGER :: TYPE_RELAX       = NSCARC_UNDEFINED_INT         !> Type of preconditi
 INTEGER :: TYPE_PRECON      = NSCARC_UNDEFINED_INT         !> Type of preconditioner for iterative solver
 INTEGER :: TYPE_PRECISION   = NSCARC_UNDEFINED_INT         !> Type of preconditioner for iterative solver
 INTEGER :: TYPE_SMOOTH      = NSCARC_UNDEFINED_INT         !> Type of smoother for multigrid method
+INTEGER :: TYPE_STORAGE     = NSCARC_UNDEFINED_INT         !> Type of storage for matrix
 INTEGER :: TYPE_DEBUG       = NSCARC_UNDEFINED_INT         !> Type of debugging level
 INTEGER :: TYPE_VERBOSE     = NSCARC_UNDEFINED_INT         !> Type of verbose level
 INTEGER :: TYPE_EXCHANGE    = NSCARC_UNDEFINED_INT         !> Type of data exchange
@@ -470,7 +478,7 @@ INTEGER :: TYPE_LU_LEVEL(NSCARC_LEVEL_MAX) = NSCARC_UNDEFINED_INT
 !> ------------------------------------------------------------------------------------------------
 !> discretization information
 INTEGER :: NLEVEL_MAX, NLEVEL_MIN                         !> Total, minimum and maximum number of multigrid levels
-INTEGER :: N_CELLS_GLOBAL(NSCARC_LEVEL_MAX)     = 0       !> number of global cells 
+INTEGER :: N_CELLS_GLOBAL(NSCARC_LEVEL_MAX)     = 0       !> number of global cells
 INTEGER :: N_CELLS_GLOBAL_DOF(NSCARC_LEVEL_MAX) = 0       !> number of degrees of freedom (unstructured case)
 INTEGER :: N_DIRIC_GLOBAL(NSCARC_LEVEL_MAX) = 0           !> global number of Dirichlet BCs
 
@@ -490,7 +498,7 @@ REAL(EB), ALLOCATABLE, DIMENSION (:)  :: LOCAL_REAL       !> Local real data arr
 INTEGER :: GLOBAL_INT
 REAL(EB):: GLOBAL_REAL
 
-INTEGER  :: FACE_ORIENTATION(6) = (/1,-1,2,-2,3,-3/)           
+INTEGER  :: FACE_ORIENTATION(6) = (/1,-1,2,-2,3,-3/)
 
 !> -----------------------------------------------------------------------------------------------
 !> Iteration parameters vectors and iteration parameters
@@ -512,7 +520,7 @@ REAL(EB) :: PARDISO   = 0.0_EB               !> time for pardiso solver
 REAL(EB) :: KRYLOV    = 0.0_EB               !> time for krylov solver
 REAL(EB) :: MULTIGRID = 0.0_EB               !> time for multigrid solver
 REAL(EB) :: MATVEC    = 0.0_EB               !> time for matrix vector multiplication
-REAL(EB) :: SCALPROD  = 0.0_EB               !> time for scalar product 
+REAL(EB) :: SCALPROD  = 0.0_EB               !> time for scalar product
 REAL(EB) :: L2NORM    = 0.0_EB               !> time for l2-norm
 REAL(EB) :: PRECON    = 0.0_EB               !> time for preconditioner
 REAL(EB) :: SMOOTH    = 0.0_EB               !> time for smoother
@@ -613,13 +621,13 @@ END TYPE SCARC_OBST_TYPE
 TYPE SCARC_AMG_TYPE
 INTEGER :: NP, NPE, NPS                                        !> number of elements for prolongation matrix
 INTEGER :: NR, NRE, NRS                                        !> number of elements for restriction matrix
-INTEGER :: NCF, NCFE, NCFS                                     !> number of internal and extended fine cells 
-INTEGER :: NCC, NCCE, NCCS                                     !> number of internal and extended coarse cells 
+INTEGER :: NCF, NCFE, NCFS                                     !> number of internal and extended fine cells
+INTEGER :: NCC, NCCE, NCCS                                     !> number of internal and extended coarse cells
 INTEGER :: NCE, NCCI                                           !> number of internal coarse cells
 INTEGER :: ICG0 = 0                                            !> auxiliary counter
 REAL(EB):: MAX_ROWSUM=0.9_EB                                   !> row sum threshold for AMG
 INTEGER,  ALLOCATABLE, DIMENSION (:)   :: CTYPE                !> type for coarsening
-INTEGER,  ALLOCATABLE, DIMENSION (:)   :: GRAPH                !> graph vector 
+INTEGER,  ALLOCATABLE, DIMENSION (:)   :: GRAPH                !> graph vector
 REAL(EB), ALLOCATABLE, DIMENSION (:)   :: MEASURE              !> measure of different cells
 INTEGER,  ALLOCATABLE, DIMENSION (:)   :: MARKER               !> cell markers for coarsening
 INTEGER,  ALLOCATABLE, DIMENSION (:,:) :: MAPPING              !> mapping for coarsening
@@ -644,16 +652,16 @@ END TYPE SCARC_COORD_TYPE
 !> Wall information related to neighbors and BC's
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_CELL_TYPE
-INTEGER :: NC_GLOBAL = 0                                        !> number of global cells 
-INTEGER :: NC_GLOBAL_DOF = 0                                    !> number of global cells 
-INTEGER,  ALLOCATABLE, DIMENSION (:)     :: NC_LOCAL            !> number of local cells, 
+INTEGER :: NC_GLOBAL = 0                                        !> number of global cells
+INTEGER :: NC_GLOBAL_DOF = 0                                    !> number of global cells
+INTEGER,  ALLOCATABLE, DIMENSION (:)     :: NC_LOCAL            !> number of local cells,
 INTEGER,  ALLOCATABLE, DIMENSION (:)     :: NC_LOCAL_DOF        !> number of local degrees of freedom (unstructured)
-INTEGER,  ALLOCATABLE, DIMENSION (:)     :: NC_OFFSET           !> offset in cell numbering 
+INTEGER,  ALLOCATABLE, DIMENSION (:)     :: NC_OFFSET           !> offset in cell numbering
 INTEGER,  ALLOCATABLE, DIMENSION (:)     :: NC_OFFSET_DOF       !> offset for local degrees of freedom (unstructured)
 INTEGER,  ALLOCATABLE, DIMENSION (:,:,:) :: DOF                 !> indicates if cell is degree of freedom
 INTEGER,  ALLOCATABLE, DIMENSION (:,:,:) :: STATE               !> state of single cells (gasphase/solid)
 INTEGER,  ALLOCATABLE, DIMENSION (:,:,:) :: CINDEX              !> cell index list
-INTEGER,  ALLOCATABLE, DIMENSION (:,:)   :: WINDEX              !> wall index list 
+INTEGER,  ALLOCATABLE, DIMENSION (:,:)   :: WINDEX              !> wall index list
 END TYPE SCARC_CELL_TYPE
 
 !> --------------------------------------------------------------------------------------------
@@ -668,8 +676,8 @@ INTEGER :: N_CELLS                                          !> number of cells
 INTEGER :: N_WALL_CELLS                                     !> number of wall cells
 INTEGER :: N_WALL_CELLS_EXT                                 !> number of external cells
 INTEGER :: N_WALL_CELLS_INT                                 !> number of internal cells
-INTEGER :: N_DIRIC = 0                                      !> number of Dirichlet BCs 
-INTEGER :: N_NEUMANN = 0                                    !> number of Neumann BCs 
+INTEGER :: N_DIRIC = 0                                      !> number of Dirichlet BCs
+INTEGER :: N_NEUMANN = 0                                    !> number of Neumann BCs
 INTEGER :: NX, NY, NZ                                       !> number of grid cells in x-, y- and z-direction
 INTEGER :: NC, NCS, NCW                                     !> number of cells
 INTEGER :: NW, NWL                                          !> number of global and local wall cells
@@ -679,38 +687,81 @@ INTEGER :: NCPLS, NCPLR                                     !> number of couplin
 TYPE (SCARC_CELL_TYPE)    :: CELL                           !> cell information
 TYPE (SCARC_COORD_TYPE)   :: COORD                          !> coordinates information
 TYPE (SCARC_AMG_TYPE)     :: AMG                            !> coordinates information
-TYPE (SCARC_MAPPING_TYPE) :: MAP                            !> mappings between different meshes 
+TYPE (SCARC_MAPPING_TYPE) :: MAP                            !> mappings between different meshes
 TYPE (SCARC_WALL_TYPE), ALLOCATABLE, DIMENSION(:) :: WALL   !> wall information
 TYPE (SCARC_FACE_TYPE), ALLOCATABLE, DIMENSION(:) :: FACE   !> face information
 TYPE (SCARC_OBST_TYPE), ALLOCATABLE, DIMENSION(:) :: OBST   !> obstruction information
 END TYPE SCARC_LEVEL_TYPE
 
 !> --------------------------------------------------------------------------------------------
+!> Compact sparse row (CSR) storage type for matrices
+!> Is based on three arrays:
+!>    - non-zero matrix values
+!>    - corresponding columns pointers
+!>    - row pointers
+!> --------------------------------------------------------------------------------------------
+TYPE SCARC_STORAGE_CSR_TYPE
+INTEGER  :: NV                                         !> number of matrix values
+INTEGER  :: NC                                         !> number of matrix columns
+INTEGER  :: NR                                         !> number of matrix rows
+REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL            !> values of matrix (double precision)
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL            !> column pointers
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL_GLOBAL     !> column pointer for global numbering
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW            !> row pointer
+END TYPE SCARC_STORAGE_CSR_TYPE
+
+!> --------------------------------------------------------------------------------------------
+!> Banded storage type for matrices
+!> The entries are stored one diagonal after the other
+!> Missing entries of subdiagonals are filled with zero
+!> Is based on two arrays:
+!>      - non-zero matrix entries diagonal-wise
+!>      - the offsets from the main diagonal
+!> --------------------------------------------------------------------------------------------
+TYPE SCARC_STORAGE_BANDED_TYPE
+INTEGER  :: NV                                         !> number of matrix values
+INTEGER  :: NB                                         !> number of matrix bands
+REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL            !> values of matrix (double precision)
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: OFF            !> offset pointers
+END TYPE SCARC_STORAGE_BANDED_TYPE
+
+!> --------------------------------------------------------------------------------------------
+!> Algebraic multigrid (AMG) storage type for matrices
+!> --------------------------------------------------------------------------------------------
+TYPE SCARC_STORAGE_AMG_TYPE
+INTEGER  :: NV                                         !> number of matrix values
+INTEGER  :: NC                                         !> number of matrix columns
+INTEGER  :: NR                                         !> number of matrix rows
+REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL            !> value of matrix (double precision)
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL            !> column pointers
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW            !> row pointer
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: POS            !> position in stencil
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: TAG            !> marking tag
+END TYPE SCARC_STORAGE_AMG_TYPE
+
+!> --------------------------------------------------------------------------------------------
 !> Matrix entries which will be stored and exchanged during generation of condensed system
 !> --------------------------------------------------------------------------------------------
-TYPE SCARC_MATRIX_CONDENSING_TYPE                      !> only needed for condensed system
-REAL(EB) :: VAL_ORIG(NSCARC_MAX_STENCIL) = 0.0_EB      !> save original values
-REAL(EB) :: VAL_COND(NSCARC_MAX_STENCIL) = 0.0_EB      !> save condensed values
-INTEGER  :: COL(NSCARC_MAX_STENCIL) = 0                !> save column pointers
-INTEGER  :: PTR(NSCARC_MAX_STENCIL) = 0                !> save storage pointer
+TYPE SCARC_STORAGE_CONDENSED_TYPE
 INTEGER  :: NROW, NCOL
-END TYPE SCARC_MATRIX_CONDENSING_TYPE
+REAL(EB) :: VAL_ORIG(NSCARC_MAX_STENCIL) = 0.0_EB      !> original values
+REAL(EB) :: VAL_COND(NSCARC_MAX_STENCIL) = 0.0_EB      !> condensed values
+INTEGER  :: COL(NSCARC_MAX_STENCIL) = 0                !> column pointers
+INTEGER  :: PTR(NSCARC_MAX_STENCIL) = 0                !> storage pointer
+END TYPE SCARC_STORAGE_CONDENSED_TYPE
 
 !> --------------------------------------------------------------------------------------------
 !> Matrices including storage pointers and lengths - double precision version
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_TYPE
-INTEGER :: NAV, NAC, NAR, NAS, NAE                     !> number of elements for different parts of structure
+INTEGER :: NAS, NAE                                    !> number of elements for different parts of structure
 INTEGER :: NSTENCIL                                    !> number of points in matrix stencil
-REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL            !> value of matrix (double precision)
-INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW            !> row pointer 
-INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL            !> column pointer
-INTEGER,  ALLOCATABLE, DIMENSION (:) :: COLG           !> column pointer for global numbering
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: STENCIL        !> matrix stencil information
-INTEGER,  ALLOCATABLE, DIMENSION (:) :: POS            !> position in stencil
-INTEGER,  ALLOCATABLE, DIMENSION (:) :: TAG            !> marking tag
 INTEGER :: NSTORE = 0
-TYPE (SCARC_MATRIX_CONDENSING_TYPE) :: STORE(NSCARC_MAX_STENCIL)
+TYPE (SCARC_STORAGE_CSR_TYPE)     :: CSR
+TYPE (SCARC_STORAGE_BANDED_TYPE)  :: BANDED
+TYPE (SCARC_STORAGE_AMG_TYPE)     :: AMG
+TYPE (SCARC_STORAGE_CONDENSED_TYPE) :: STORE(NSCARC_MAX_STENCIL)
 END TYPE SCARC_MATRIX_TYPE
 
 #ifdef WITH_MKL_FB
@@ -721,7 +772,7 @@ TYPE SCARC_MATRIX_FB_TYPE
 INTEGER :: NAV, NAC, NAR, NAS, NAE                        !> number of elements for different parts of structure
 INTEGER :: NSTENCIL                                       !> number of points in matrix stencil
 REAL (FB), ALLOCATABLE, DIMENSION (:) :: VAL              !> value of matrix (single precision)
-INTEGER,   ALLOCATABLE, DIMENSION (:) :: ROW              !> row pointer 
+INTEGER,   ALLOCATABLE, DIMENSION (:) :: ROW              !> row pointer
 INTEGER,   ALLOCATABLE, DIMENSION (:) :: COL              !> column pointer
 INTEGER,   ALLOCATABLE, DIMENSION (:) :: COLG             !> column pointer for global numbering
 INTEGER,   ALLOCATABLE, DIMENSION (:) :: STENCIL          !> matrix stencil information
@@ -799,7 +850,7 @@ INTEGER :: TYPE_NLMAX     = NSCARC_UNDEFINED_INT    !> maximum level for that so
 INTEGER :: TYPE_RELAX     = NSCARC_UNDEFINED_INT    !> relaxation method
 INTEGER :: TYPE_TWOLEVEL  = NSCARC_UNDEFINED_INT    !> schwarz method?
 INTEGER :: TYPE_INTERPOL  = NSCARC_UNDEFINED_INT    !> interpolation type
-INTEGER :: TYPE_ACCURACY  = NSCARC_UNDEFINED_INT    !> accuracy requirements 
+INTEGER :: TYPE_ACCURACY  = NSCARC_UNDEFINED_INT    !> accuracy requirements
 INTEGER :: TYPE_PRECISION = NSCARC_UNDEFINED_INT    !> precision type for preconditioning or LU-decomposition
 INTEGER :: TYPE_CYCLING   = NSCARC_UNDEFINED_INT    !> multigrid cycle
 END TYPE SCARC_TYPES_TYPE
@@ -808,8 +859,8 @@ END TYPE SCARC_TYPES_TYPE
 !> Settings of iterations parameters for different solvers
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_CONVERGENCE_TYPE
-INTEGER  :: NIT   = NSCARC_UNDEFINED_INT            !> maximum iteration number 
-INTEGER  :: ITE   = NSCARC_UNDEFINED_INT            !> current iteration number 
+INTEGER  :: NIT   = NSCARC_UNDEFINED_INT            !> maximum iteration number
+INTEGER  :: ITE   = NSCARC_UNDEFINED_INT            !> current iteration number
 REAL(EB) :: EPS   = NSCARC_UNDEFINED_REAL_EB        !> required accuracy
 REAL(EB) :: RES   = NSCARC_UNDEFINED_REAL_EB        !> current residual
 REAL(EB) :: RESIN = NSCARC_UNDEFINED_REAL_EB        !> initial residual
@@ -847,7 +898,7 @@ END TYPE SCARC_FFT_TYPE
 !> MKL information
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MKL_TYPE
-INTEGER, ALLOCATABLE :: IPARM(:)                      
+INTEGER, ALLOCATABLE :: IPARM(:)
 INTEGER :: MAXFCT, MNUM, MTYPE, PHASE, NRHS, ERROR, MSGLVL
 INTEGER :: PERM(1)
 TYPE(MKL_PARDISO_HANDLE),               ALLOCATABLE :: PT_H(:), PT(:)
@@ -1025,7 +1076,7 @@ ENDIF
 IF (.NOT.BCSV_NONE) THEN
    IF (MYID == 0) THEN
       WRITE (MSG%FILE_CSV, '(A,A)') TRIM(CHID),'_scarc.csv'
-      MSG%LU_CSV = GET_FILE_NUMBER()       
+      MSG%LU_CSV = GET_FILE_NUMBER()
       OPEN (MSG%LU_CSV, FILE=MSG%FILE_CSV)
       WRITE(MSG%LU_CSV,*) 'ITE_PRES, ITE_TOTAL, ITE_CG, ITE_MG, ITE_LU, ITE_COARSE, ITE_SMOOTH, TSMOOTH, LEVEL, SOLVER, RES'
    ENDIF
@@ -1047,7 +1098,7 @@ IF (TRIM(CPARAM) /= 'NONE') THEN
 ELSE IF (NPARAM /= -999) THEN
    WRITE(MSG%TEXT,'(4A, I8)') TRIM(MSG%HISTORY(MSG%NCURRENT)), ' : ',TRIM(CTEXT), ' : ',NPARAM
    IF (MYID == 0) WRITE(LU_ERR,'(/A,A,I8,A,A,A)') TRIM(CTEXT),' : ',NPARAM,' (CHID: ',TRIM(CHID),')'
-ELSE 
+ELSE
    WRITE(MSG%TEXT,'(3A)') TRIM(MSG%HISTORY(MSG%NCURRENT)), ' : ',TRIM(CTEXT)
    IF (MYID == 0) WRITE(LU_ERR,'(/A,A,A,A)') TRIM(CTEXT),' (CHID: ',TRIM(CHID),')'
 ENDIF
@@ -1072,9 +1123,9 @@ MKL_ERROR_PARDISO      = 'Error: MKL Library compile flag not defined, Pardiso s
 MKL_ERROR_CLUSTER      = 'Error: MKL Library compile flag not defined, Cluster_Sparse_Solver not available'
 FFT_ERROR_UNSTRUCTURED = 'Error: FFT-preconditioning only possible for structured discretization '
 
-!> 
+!>
 !> ------------- set type of discretization
-!> 
+!>
 SELECT CASE (TRIM(SCARC_DISCRETIZATION))
    CASE ('STRUCTURED')
       TYPE_DISCRET = NSCARC_DISCRET_STRUCTURED
@@ -1085,9 +1136,9 @@ SELECT CASE (TRIM(SCARC_DISCRETIZATION))
 END SELECT
 PRES_ON_WHOLE_DOMAIN = (TYPE_DISCRET == NSCARC_DISCRET_STRUCTURED)
 
-!> 
+!>
 !> ------------ set type of global solver
-!> 
+!>
 SELECT CASE (TRIM(SCARC_METHOD))
 
    CASE ('KRYLOV')
@@ -1266,10 +1317,10 @@ SELECT CASE (TRIM(SCARC_METHOD))
 
 END SELECT
 
-!> 
+!>
 !> if a multigrid solver is used (either as main solver or as preconditioner)
 !> set types for multigrid, coarse grid solver and cycling pattern
-!> 
+!>
 IF (TYPE_METHOD == NSCARC_METHOD_MULTIGRID .OR. TYPE_PRECON == NSCARC_RELAX_MULTIGRID) THEN
 
    !> set type of multigrid (GEOMETRIC/ALGEBRAIC with corresponding coarsening strategy)
@@ -1351,9 +1402,21 @@ SELECT CASE (TRIM(SCARC_COARSE))
       CALL SCARC_SHUTDOWN('Error with input parameter ', SCARC_COARSE, -999)
 END SELECT
 
-!> 
+!>
+!> set type of matrix storage (CSR/BANDED)
+!>
+SELECT CASE (TRIM(SCARC_STORAGE))
+CASE ('CSR')
+      TYPE_STORAGE = NSCARC_STORAGE_CSR
+   CASE ('BANDED')
+      TYPE_STORAGE = NSCARC_STORAGE_BANDED
+   CASE DEFAULT
+      CALL SCARC_SHUTDOWN('Error with input parameter ', SCARC_STORAGE, -999)
+END SELECT
+
+!>
 !> set type of accuracy (ABSOLUTE/RELATIVE)
-!> 
+!>
 SELECT CASE (TRIM(SCARC_ACCURACY))
    CASE ('ABSOLUTE')
       TYPE_ACCURACY = NSCARC_ACCURACY_ABSOLUTE
@@ -1363,9 +1426,9 @@ SELECT CASE (TRIM(SCARC_ACCURACY))
       CALL SCARC_SHUTDOWN('Error with input parameter ', SCARC_ACCURACY, -999)
 END SELECT
 
-!> 
+!>
 !> set type of precision for preconditioner (SINGLE/DOUBLE)
-!> 
+!>
 SELECT CASE (TRIM(SCARC_PRECISION))
    CASE ('SINGLE')
       TYPE_PRECISION = NSCARC_PRECISION_FB
@@ -1375,9 +1438,9 @@ SELECT CASE (TRIM(SCARC_PRECISION))
       CALL SCARC_SHUTDOWN('Error with input parameter ', SCARC_PRECISION, -999)
 END SELECT
 
-!> 
+!>
 !> set level of debugging (NONE/LESS/MUCH)
-!> 
+!>
 SELECT CASE (TRIM(SCARC_DEBUG))
    CASE ('NONE')
       TYPE_DEBUG = NSCARC_UNDEFINED_INT
@@ -1389,9 +1452,9 @@ SELECT CASE (TRIM(SCARC_DEBUG))
       CALL SCARC_SHUTDOWN('Error with input parameter ', SCARC_DEBUG, -999)
 END SELECT
 
-!> 
+!>
 !> set level for verbose messages (NONE/LESS/MUCH)
-!> 
+!>
 SELECT CASE (TRIM(SCARC_VERBOSE))
    CASE ('NONE')
       TYPE_VERBOSE = NSCARC_UNDEFINED_INT
@@ -1432,7 +1495,13 @@ BMKL = (TYPE_PRECON >= NSCARC_RELAX_PARDISO) .OR. &
        (TYPE_SMOOTH >= NSCARC_RELAX_PARDISO) .OR. &
        (BMULTILEVEL .AND. TYPE_COARSE == NSCARC_COARSE_DIRECT)
 
-BSTRUCTURED = TYPE_DISCRET == NSCARC_DISCRET_STRUCTURED 
+DO NL == NLEVEL_MIN, NLEVEL_MAX
+   BLMKL(NL) = (TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
+               (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
+                TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL
+ENDDO
+
+BSTRUCTURED = TYPE_DISCRET == NSCARC_DISCRET_STRUCTURED
 
 CALL SCARC_LEAVE_ROUTINE()
 END SUBROUTINE SCARC_PARSE_INPUT
@@ -1492,11 +1561,11 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
    CASE (NSCARC_METHOD_MULTIGRID)
 
       SELECT_MULTIGRID: SELECT CASE (TYPE_MULTIGRID)
-      
+
          !> predefined hierarchy of levels in case of geometric multigrid-method
          CASE (NSCARC_MULTIGRID_GEOMETRIC)
             CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
-      
+
 #ifdef WITH_MKL
             SELECT_SMOOTHER: SELECT CASE (TYPE_SMOOTH)
                CASE (NSCARC_RELAX_PARDISO)
@@ -1508,16 +1577,16 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
                      TYPE_LU_LEVEL(NL) = NSCARC_MKL_GLOBAL
                   ENDDO
             END SELECT SELECT_SMOOTHER
-      
+
             IF (TYPE_LUDECOMP == NSCARC_MKL_COARSE) TYPE_LU_LEVEL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
-      
+
          !> first, only finest level is set, further levels are defined during coarsening process
          CASE (NSCARC_MULTIGRID_ALGEBRAIC)
             CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_AMG)
-      
+
       END SELECT SELECT_MULTIGRID
-      
+
    !> ----------------------- MKL method -----------------------------------------
    CASE (NSCARC_METHOD_LUDECOMP)
 
@@ -1556,8 +1625,8 @@ SELECT_LEVEL_TYPE: SELECT CASE (NTYPE)
    CASE(NSCARC_LEVEL_MULTI)
 
       NLEVEL = NSCARC_LEVEL_MAX
-      KLEVEL = NSCARC_LEVEL_MAX       
-      
+      KLEVEL = NSCARC_LEVEL_MAX
+
       DO NM=1,NMESHES
          KLEVEL(1)=SCARC_GET_MAX_LEVEL(MESHES(NM)%IBAR,1)
          IF (.NOT.TWO_D) KLEVEL(2)=SCARC_GET_MAX_LEVEL(MESHES(NM)%JBAR,2)
@@ -1565,7 +1634,7 @@ SELECT_LEVEL_TYPE: SELECT CASE (NTYPE)
          KLEVEL_MIN = MINVAL(KLEVEL)
          IF (KLEVEL_MIN<NLEVEL) NLEVEL=KLEVEL_MIN
       ENDDO
-      
+
       NLEVEL_MIN  = 1
       IF (BGMG.OR.BCGGMG) THEN
          IF (SCARC_MULTIGRID_LEVEL /= -1) THEN
@@ -1652,7 +1721,7 @@ CALL CHKMEMERR ('SCARC_SETUP', 'STACK', IERROR)
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    !> Needed information about other meshes
-   ALLOCATE (SCARC(NM)%OSCARC(NMESHES), STAT=IERROR) 
+   ALLOCATE (SCARC(NM)%OSCARC(NMESHES), STAT=IERROR)
    CALL CHKMEMERR ('SCARC_SETUP_TYPES', 'OSCARC', IERROR)
 
    !> Information for single grid levels
@@ -1711,12 +1780,12 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    S => SCARC(NM)
 
    !> store bounds of mesh in SCARC-structure
-   S%XS = M%XS                 
-   S%XF = M%XF                 
-   S%YS = M%YS                 
-   S%YF = M%YF                 
-   S%ZS = M%ZS                 
-   S%ZF = M%ZF                 
+   S%XS = M%XS
+   S%XF = M%XF
+   S%YS = M%YS
+   S%YF = M%YF
+   S%ZS = M%ZS
+   S%ZF = M%ZF
 
    S%IBAR = M%IBAR
    S%JBAR = M%JBAR
@@ -1725,7 +1794,7 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    NX  = M%IBAR
    NY  = M%JBAR
    NZ  = M%KBAR
- 
+
    LEVEL_LEVEL_LOOP: DO NL = NLEVEL_MIN, NLEVEL_MAX
 
       IF (NL > NLEVEL_MIN .AND. BAMG) EXIT LEVEL_LEVEL_LOOP
@@ -1740,7 +1809,7 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       L%N_WALL_CELLS_EXT = M%N_EXTERNAL_WALL_CELLS
       L%N_WALL_CELLS_INT = M%N_INTERNAL_WALL_CELLS
 
-      L%NW = L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT 
+      L%NW = L%N_WALL_CELLS_EXT + L%N_WALL_CELLS_INT
 
       !> Number of local cells per mesh
       CALL SCARC_ALLOCATE_INT1(L%CELL%NC_LOCAL     , 1, NMESHES, NSCARC_INIT_ZERO, 'NC_LOCAL')
@@ -1784,7 +1853,7 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       !> Allocate vectors for coordinate information
       IF (NL == NLEVEL_MIN) THEN
-   
+
          XCOR => M%X
          YCOR => M%Y
          ZCOR => M%Z
@@ -1840,7 +1909,7 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          XMID => C%XMID
          YMID => C%YMID
          ZMID => C%ZMID
-         
+
       ENDIF
 
       !> Allocate vectors for step sizes in different directions
@@ -1897,7 +1966,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    M  => MESHES(NM)
    S  => SCARC(NM)
-   LF => S%LEVEL(NLEVEL_MIN)                         !> level fine 
+   LF => S%LEVEL(NLEVEL_MIN)                         !> level fine
 
    ALLOCATE(LF%WALL(LF%NW), STAT=IERROR)
    CALL ChkMemErr('SCARC_SETUP_INTERFACES','WALL',IERROR)
@@ -1972,8 +2041,8 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             OLC => S%OSCARC(NOM)%LEVEL(NL)                         !> pointer to coarse level on other mesh
             OCA => S%OSCARC(NOM)%SYSTEM(NL)%A                      !> pointer to coarse matrix of other meshes
 
-            OLC%NX = OLF%NX/2                          
-            IF (TWO_D) THEN                            
+            OLC%NX = OLF%NX/2
+            IF (TWO_D) THEN
                OLC%NY = 1
             ELSE
                OLC%NY = OLF%NY/2
@@ -1983,7 +2052,7 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             OLC%N_WALL_CELLS_EXT = 4 * (OLC%NX * OLC%NZ + OLC%NX * OLC%NY + OLC%NY * OLC%NZ)   !> ACHTUNG: warum 4?
 
             OLC%NC  = OLC%NX * OLC%NY * OLC%NZ                     !> see above
-            OLC%NW  = OLC%N_WALL_CELLS_EXT 
+            OLC%NW  = OLC%N_WALL_CELLS_EXT
             OLC%NCG = 0
 
             OCA%NAV = 0                                            !> see above
@@ -2073,7 +2142,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       !> In case of GMG with a predefined grid hierarchy allocate corresponding level-structures
       IF (NLEVEL_MAX > NLEVEL_MIN .AND. .NOT.BAMG) THEN
          DO NL=NLEVEL_MIN+1,NLEVEL_MAX
-            OL => S%OSCARC(NOM)%LEVEL(NL)                          
+            OL => S%OSCARC(NOM)%LEVEL(NL)
             ALLOCATE (OL%WALL(OL%NCG), STAT=IERROR)
             CALL CHKMEMERR ('SCARC_SETUP_INTERFACES', 'OL%WALL', IERROR)
             !ALLOCATE (OL%FACE(-3:3), STAT=IERROR)
@@ -2150,7 +2219,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    NUM_FACE_NEIGHBORS = 0
    NUM_MESH_NEIGHBORS = 0
 
-   !> For all solvers: Determine array WALL and PRESSURE_BC_INDEX on finest level 
+   !> For all solvers: Determine array WALL and PRESSURE_BC_INDEX on finest level
    L => S%LEVEL(NLEVEL_MIN)
    C => L%COORD
 
@@ -2278,7 +2347,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       NCPL_LAST = NCPL
 
    ENDDO EXTERNAL_WALL_CELLS_LOOP1
- 
+
    !> Then process internal wall cells
    INTERNAL_WALL_CELLS_LOOP1: DO IWG = L%N_WALL_CELLS_EXT+1, L%N_WALL_CELLS_EXT+L%N_WALL_CELLS_INT
 
@@ -2358,7 +2427,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       !> INTERNAL  : the global Poisson problem is solved, no need to impose BC's along mesh interfaces
       !> DIRICHLET : in the structured case face-wise BC-settings are used ccording to FFT-settings
       !>             (this also allows to use FFT as local preconditioner)
-      !>             in the unstructured case Dirichlet BCs are only used for open boundary cells 
+      !>             in the unstructured case Dirichlet BCs are only used for open boundary cells
       !> NEUMANN   : is used for the rest
       !>
       IS_BC_DIRICHLET  = WC%PRESSURE_BC_INDEX == DIRICHLET
@@ -2402,9 +2471,9 @@ ENDDO MESHES_LOOP1
 
 CALL SCARC_SETUP_SUBDIVISION(NLEVEL_MIN)
 
-!> 
+!>
 !> Set DISCRET information on finest level and if requested also on coarser levels
-!> 
+!>
 CALL SCARC_SETUP_GLOBALS_UNSTRUCTURED(NLEVEL_MIN)
 IF (.NOT.BAMG) THEN
    DO NL = NLEVEL_MIN+1, NLEVEL_MAX
@@ -2437,7 +2506,7 @@ ENDIF
 !>
 !> Only in case of Twolevel-CG- or GMG-method (as main solver or preconditioner):
 !> Determine WALL, FACE and OSCARC types for coarser levels
-!> 
+!>
 MULTI_LEVEL_IF: IF (BMULTILEVEL) THEN
 
    MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -2447,7 +2516,7 @@ MULTI_LEVEL_IF: IF (BMULTILEVEL) THEN
       LEVEL_GMG_LEVEL_LOOP: DO NL = NLEVEL_MIN+1, NLEVEL_MAX
 
          LF => S%LEVEL(NL-1)                   !> level fine
-         LC => S%LEVEL(NL)                     !> level coarse 
+         LC => S%LEVEL(NL)                     !> level coarse
          MC => LC%MAP                          !> mappings on coarse level
 
          IREFINE=IREFINE*2
@@ -2533,7 +2602,7 @@ DO INBR = 1, SCARC(NM)%N_NEIGHBORS
    IF (SCARC(NM)%NEIGHBORS(INBR) == NSCARC_UNDEFINED_INT) EXIT      !> not found, to be stored
    IF (SCARC(NM)%NEIGHBORS(INBR) == NOM) RETURN                     !> nothing to do, already stored
 ENDDO
-SCARC(NM)%NEIGHBORS(INBR) = NOM 
+SCARC(NM)%NEIGHBORS(INBR) = NOM
 RETURN
 END SUBROUTINE SCARC_UPDATE_NEIGHBORS
 
@@ -2652,7 +2721,7 @@ DO IW = 1, L%NW
 
    IOR0 = L%WALL(IW)%IOR
    ICG  = L%CELL%CINDEX(I,J,K)
-  
+
    L%CELL%WINDEX(ICG,-IOR0) = IW
 
 ENDDO
@@ -2802,7 +2871,7 @@ DO IO = 1, LC%N_OBST
          IWC = IWC + 1
       ENDDO
    ENDDO
-         
+
 ENDDO
 
 CALL SCARC_LEAVE_ROUTINE()
@@ -2892,7 +2961,7 @@ IF (TWO_D) THEN
 
    !> IOR = 1
    IOR0 = 1
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
       ICF(1) = CELL_INDEX(1  , IYF  , IZF  )
       ICF(2) = CELL_INDEX(1  , IYF  , IZF+1)
@@ -2901,7 +2970,7 @@ IF (TWO_D) THEN
 
    !> IOR = -1
    IOR0 = -1
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
       ICF(1) = CELL_INDEX(LF%NX, IYF  , IZF  )
       ICF(2) = CELL_INDEX(LF%NX, IYF  , IZF+1)
@@ -2910,9 +2979,9 @@ IF (TWO_D) THEN
 
    !> IOR = 2
    IOR0 = 2
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
-      DO IXC = 1, LC%NX 
+      DO IXC = 1, LC%NX
          IXF = 2*IXC - 1
          ICF(1) = CELL_INDEX(IXF  , IYF, IZF  )
          ICF(2) = CELL_INDEX(IXF+1, IYF, IZF  )
@@ -2925,9 +2994,9 @@ IF (TWO_D) THEN
    !> IOR = -2
    IOR0 = -2
    IXF  = 1
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
-      DO IXC = 1, LC%NX 
+      DO IXC = 1, LC%NX
          IXF = 2*IXC - 1
          ICF(1) = CELL_INDEX(IXF    , IYF, IZF  )
          ICF(2) = CELL_INDEX(IXF+1  , IYF, IZF  )
@@ -2939,7 +3008,7 @@ IF (TWO_D) THEN
 
    !> IOR = 3
    IOR0 = 3
-   DO IXC = 1, LC%NX 
+   DO IXC = 1, LC%NX
       IXF = 2*IXC - 1
       ICF(1) = CELL_INDEX(IXF    , IYF  , 1)
       ICF(2) = CELL_INDEX(IXF+1  , IYF  , 1)
@@ -2948,7 +3017,7 @@ IF (TWO_D) THEN
 
    !> IOR = -3
    IOR0 = -3
-   DO IXC = 1, LC%NX 
+   DO IXC = 1, LC%NX
       IXF = 2*IXC - 1
       ICF(1) = CELL_INDEX(IXF  , IYF  , LF%NZ)
       ICF(2) = CELL_INDEX(IXF+1, IYF  , LF%NZ)
@@ -2959,9 +3028,9 @@ ELSE
 
    !> IOR = 1
    IOR0 = 1
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
-      DO IYC = 1, LC%NY 
+      DO IYC = 1, LC%NY
          IYF = 2*IYC - 1
          ICF(1) = CELL_INDEX(1  , IYF  , IZF  )
          ICF(2) = CELL_INDEX(1  , IYF+1, IZF  )
@@ -2973,9 +3042,9 @@ ELSE
 
    !> IOR = -1
    IOR0 = -1
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
-      DO IYC = 1, LC%NY 
+      DO IYC = 1, LC%NY
          IYF = 2*IYC - 1
          ICF(1) = CELL_INDEX(LF%NX, IYF  , IZF  )
          ICF(2) = CELL_INDEX(LF%NX, IYF+1, IZF  )
@@ -2987,9 +3056,9 @@ ELSE
 
    !> IOR = 2
    IOR0 = 2
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
-      DO IXC = 1, LC%NX 
+      DO IXC = 1, LC%NX
          IXF = 2*IXC - 1
          ICF(1) = CELL_INDEX(IXF  , 1, IZF  )
          ICF(2) = CELL_INDEX(IXF+1, 1, IZF  )
@@ -3002,9 +3071,9 @@ ELSE
    !> IOR = -2
    IOR0 = -2
    IXF  = 1
-   DO IZC = 1, LC%NZ 
+   DO IZC = 1, LC%NZ
       IZF = 2*IZC - 1
-      DO IXC = 1, LC%NX 
+      DO IXC = 1, LC%NX
          IXF = 2*IXC - 1
          ICF(1) = CELL_INDEX(IXF    , LF%NY, IZF  )
          ICF(2) = CELL_INDEX(IXF+1  , LF%NY, IZF  )
@@ -3016,9 +3085,9 @@ ELSE
 
    !> IOR = 3
    IOR0 = 3
-   DO IYC = 1, LC%NY 
+   DO IYC = 1, LC%NY
       IYF = 2*IYC - 1
-      DO IXC = 1, LC%NX 
+      DO IXC = 1, LC%NX
          IXF = 2*IXC - 1
          ICF(1) = CELL_INDEX(IXF    , IYF  , 1)
          ICF(2) = CELL_INDEX(IXF+1  , IYF  , 1)
@@ -3030,9 +3099,9 @@ ELSE
 
    !> IOR = -3
    IOR0 = -3
-   DO IYC = 1, LC%NY 
+   DO IYC = 1, LC%NY
       IYF = 2*IYC - 1
-      DO IXC = 1, LC%NX 
+      DO IXC = 1, LC%NX
          IXF = 2*IXC - 1
          ICF(1) = CELL_INDEX(IXF  , IYF  , LF%NZ)
          ICF(2) = CELL_INDEX(IXF+1, IYF  , LF%NZ)
@@ -3094,7 +3163,7 @@ DO IO = 1, LF%N_OBST
 
    OB%K1 = (LF%OBST(IO)%K1+1)/2
    OB%K2 =  LF%OBST(IO)%K2/2
-   
+
    !> Analyze IOR = 1
    I = OB%I1
    DO K = OB%K1+1, OB%K2
@@ -3154,7 +3223,7 @@ DO IO = 1, LF%N_OBST
          NW_INT = NW_INT + 1
       ENDDO
    ENDDO
-         
+
 ENDDO
 
 SCARC_COUNT_INTERNAL_WALL_CELLS = NW_INT
@@ -3291,7 +3360,7 @@ DO IZ = NZ1, NZ2
 
          L%WALL(IWG)%ICE(ICPL) = ICE                    !> number of extended grid cell
          L%WALL(IWG)%ICG(ICPL) = ICG                    !> number of ghost grid cell
-   
+
          M%ICE_TO_IWG(ICE)  = IWG                       !> map extended cell to global wall cell
          M%ICE_TO_IWL(ICE)  = IWL                       !> map extended cell to local wall cell
          M%ICE_TO_ICG(ICE)  = ICG                       !> map extended cell to ghost cell
@@ -3406,7 +3475,7 @@ SUBROUTINE SCARC_SETUP_FACE_DIMENSIONS(IOR0, IWG, NM, NL)
 INTEGER, INTENT(IN)    :: IOR0, NM, NL
 INTEGER, INTENT(INOUT) :: IWG
 INTEGER:: INBR
-TYPE (SCARC_LEVEL_TYPE), POINTER :: LC, LF            !> LEVEL types for coarse and fine 
+TYPE (SCARC_LEVEL_TYPE), POINTER :: LC, LF            !> LEVEL types for coarse and fine
 TYPE (SCARC_FACE_TYPE) , POINTER :: FC, FF            !> FACE types on coarse and fine level
 
 CALL SCARC_ENTER_ROUTINE('SCARC_SETUP_FACE_DIMENSIONS')
@@ -4106,7 +4175,7 @@ INTEGER, INTENT(IN) :: NL
 INTEGER :: NM, NM2
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L
 
-!> For structured discretizations, numbers are the same 
+!> For structured discretizations, numbers are the same
 IF (BSTRUCTURED) THEN
 
    DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -4126,10 +4195,10 @@ ELSE
          LOCAL_INT(NM2) = SCARC(NM2)%LEVEL(NL)%CELL%NC_LOCAL_DOF(NM2)
       ENDDO
    ENDDO MESHES_LOOP1
-   
+
    CALL MPI_ALLGATHERV(MPI_IN_PLACE,1,MPI_INTEGER,LOCAL_INT,COUNTS,DISPLS,&
                        MPI_INTEGER,MPI_COMM_WORLD,IERROR)
-   
+
    MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       L => SCARC(NM)%LEVEL(NL)
       L%CELL%NC_LOCAL_DOF(1:NMESHES) = LOCAL_INT(1:NMESHES)
@@ -4156,7 +4225,7 @@ INTEGER :: NM, NL
 CALL SCARC_ENTER_ROUTINE('SCARC_SETUP_SYSTEM')
 
 !> ---------------------------------------------------------------------------------------------
-!> Setup sizes for system matrices 
+!> Setup sizes for system matrices
 !> ---------------------------------------------------------------------------------------------
 SELECT_METHOD: SELECT CASE (TYPE_METHOD)
 
@@ -4227,7 +4296,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 #ifdef WITH_MKL
             !> ---------------------------------------------------------------------------------------
-            !> in case of Pardiso as preconditioners and possible coarse grid correction 
+            !> in case of Pardiso as preconditioners and possible coarse grid correction
             !> ---------------------------------------------------------------------------------------
             CASE (NSCARC_RELAX_PARDISO)
 
@@ -4243,7 +4312,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDIF
 
             !> ---------------------------------------------------------------------------------------
-            !> in case of Cluster_Sparse_Solver as preconditioner 
+            !> in case of Cluster_Sparse_Solver as preconditioner
             !> ---------------------------------------------------------------------------------------
             CASE (NSCARC_RELAX_CLUSTER)
 
@@ -4319,7 +4388,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 #ifdef WITH_MKL
       !> ---------------------------------------------------------------------------------------------
-      !> MKL-Pardiso method 
+      !> MKL-Pardiso method
       !> ---------------------------------------------------------------------------------------------
       CASE (NSCARC_METHOD_LUDECOMP)
 
@@ -4382,32 +4451,22 @@ L => SCARC(NM)%LEVEL(NL)
 A => SCARC(NM)%SYSTEM(NL)%A
 
 IF (TWO_D) THEN
-   NSTENCIL = 5
+   A%NSTENCIL = 5
 ELSE
-   NSTENCIL = 7
+   A%NSTENCIL = 7
 ENDIF
-NAV = L%NCS*NSTENCIL 
-NAC = L%NCS*NSTENCIL 
-NAR = L%NCS + 1
-CALL SCARC_ALLOCATE_MATRIX(A, NAV, NAC, NAR, NSTENCIL, NSCARC_INIT_ZERO, 'A')
 
-#ifdef WITH_MKL
-IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
-    (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
-     TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
-   CALL SCARC_ALLOCATE_INT1 (A%COLG, 1, NAC, NSCARC_INIT_ZERO, 'A%COLG')
-ENDIF
-#endif
-
+!> Set maximum size of matrix depending on size of stencil (5-point Laplacian in 2D, 7-point Laplacian in 3D)
+CALL SCARC_ALLOCATE_MATRIX(A, 'A', L%NC, NSCARC_INIT_ZERO, NL)
 
 IF (NL == NLEVEL_MIN) THEN
    CELL_INDEX => MESHES(NM)%CELL_INDEX
    WALL_INDEX => MESHES(NM)%WALL_INDEX
-   !NCELLS     =  N_CELLS(NM)             ! ACHTUNG: Kann weg ?
+   !NCELLS     =  N_CELLS(NM)             ! CAUTION: Still needed ?
 ELSE
    CELL_INDEX => L%CELL%CINDEX
    WALL_INDEX => L%CELL%WINDEX
-   !NCELLS     =  L%N_CELLS               ! ACHTUNG: Kann weg ?
+   !NCELLS     =  L%N_CELLS               ! CAUTION: Still needed ?
 ENDIF
 
 IWTYPE=-9999
@@ -4485,17 +4544,17 @@ ELSE   ! 3D
    DO IZ = 1, L%NZ
       DO IY = 1, L%NY
          DO IX = 1, L%NX
- 
+
             IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL%STATE(IX, IY, IZ)/=NSCARC_DISCRET_GASPHASE) CYCLE
- 
+
             IWTYPE = 0
             IWNUM  = 0
- 
+
             IC  = L%CELL%DOF(IX, IY, IZ)
             ICI = CELL_INDEX(IX, IY, IZ)
- 
+
             CALL SCARC_SETUP_MATRIX_MAINDIAG (IC, IP, IX, IY, IZ, NM, NL)
- 
+
             !> set subdiagonal entries depending on type of neighboring cell
             !> IOR = 1
             IOR0 = 1
@@ -4507,7 +4566,7 @@ ELSE   ! 3D
                ICTYPE = L%CELL%STATE(IX-1, IY, IZ)
                CALL SCARC_SETUP_MATRIX_SUBDIAG(IOR0, IC, IP, IX, ICTYPE, ICNUM, NM, NL)
             ENDIF
- 
+
             !> IOR = -1
             IOR0 = -1
             IF (ICI   /= 0) IWNUM  = WALL_INDEX(ICI, -IOR0)
@@ -4518,7 +4577,7 @@ ELSE   ! 3D
                ICTYPE = L%CELL%STATE(IX+1, IY, IZ)
                CALL SCARC_SETUP_MATRIX_SUBDIAG(IOR0, IC, IP, IX, ICTYPE, ICNUM, NM, NL)
             ENDIF
- 
+
             !> IOR = 2
             IOR0 = 2
             IF (ICI   /= 0) IWNUM  = WALL_INDEX(ICI, -IOR0)
@@ -4529,7 +4588,7 @@ ELSE   ! 3D
                ICTYPE = L%CELL%STATE(IX, IY-1, IZ)
                CALL SCARC_SETUP_MATRIX_SUBDIAG(IOR0, IC, IP, IY, ICTYPE, ICNUM, NM, NL)
             ENDIF
- 
+
             !> IOR = -2
             IOR0 = -2
             IF (ICI   /= 0) IWNUM  = WALL_INDEX(ICI, -IOR0)
@@ -4540,7 +4599,7 @@ ELSE   ! 3D
                ICTYPE = L%CELL%STATE(IX, IY+1, IZ)
                CALL SCARC_SETUP_MATRIX_SUBDIAG(IOR0, IC, IP, IY, ICTYPE, ICNUM, NM, NL)
             ENDIF
- 
+
             !> IOR = 3
             IOR0 = 3
             IF (ICI   /= 0) IWNUM  = WALL_INDEX(ICI, -IOR0)
@@ -4551,7 +4610,7 @@ ELSE   ! 3D
                ICTYPE = L%CELL%STATE(IX, IY, IZ-1)
                CALL SCARC_SETUP_MATRIX_SUBDIAG(IOR0, IC, IP, IZ, ICTYPE, ICNUM, NM, NL)
             ENDIF
- 
+
             !> IOR = -3
             IOR0 = -3
             IF (ICI   /= 0) IWNUM  = WALL_INDEX(ICI, -IOR0)
@@ -4562,7 +4621,7 @@ ELSE   ! 3D
                ICTYPE = L%CELL%STATE(IX, IY, IZ+1)
                CALL SCARC_SETUP_MATRIX_SUBDIAG  (IOR0, IC, IP, IZ, ICTYPE, ICNUM, NM, NL)
             ENDIF
- 
+
          ENDDO
       ENDDO
    ENDDO
@@ -4570,10 +4629,10 @@ ELSE   ! 3D
 ENDIF
 A%ROW(A%NAR) = IP
 A%NAV        = IP-1                         !> set correct number of matrix entries
-A%NAS        = IP-1                                   
+A%NAS        = IP-1
 A%NAC        = IP-1
 
-CALL SCARC_REDUCE_MATRIX(A, A%NAV, 'Reduced System-Matrix')
+CALL SCARC_RESIZE_MATRIX(A, A%NAV, 'Reduced System-Matrix')
 
 !WRITE(*,*) 'ACHTUNG: COLG muss auch noch reduziert werden!'
 CALL SCARC_LEAVE_ROUTINE()
@@ -4590,30 +4649,45 @@ SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG (IC, IP, IX, IY, IZ, NM, NL)
 INTEGER, INTENT(IN)  :: IC, IX, IY, IZ
 INTEGER, INTENT(IN)  :: NM, NL
 INTEGER, INTENT(INOUT) :: IP
-TYPE (SCARC_LEVEL_TYPE) ,  POINTER :: L
-TYPE (SCARC_MATRIX_TYPE) , POINTER :: A
-TYPE (SCARC_COORD_TYPE)  , POINTER :: C
+TYPE (SCARC_LEVEL_TYPE), POINTER :: L
+TYPE (SCARC_COORD_TYPE), POINTER :: C
+TYPE (SCARC_STORAGE_CSR_TYPE),    POINTER :: AC
+TYPE (SCARC_STORAGE_BANDED_TYPE), POINTER :: AB
 
-A => SCARC(NM)%SYSTEM(NL)%A
 L => SCARC(NM)%LEVEL(NL)
 C => SCARC(NM)%LEVEL(NL)%COORD
 
-A%VAL(IP) = A%VAL(IP) - 2.0_EB/(C%DXL(IX-1)*C%DXL(IX))
-IF (.NOT.TWO_D) A%VAL(IP) = A%VAL(IP) - 2.0_EB/(C%DYL(IY-1)*C%DYL(IY))
-A%VAL(IP) = A%VAL(IP) - 2.0_EB/(C%DZL(IZ-1)*C%DZL(IZ))
+SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
 
-A%ROW(IC) = IP
-A%COL(IP) = IC
-      
-#ifdef WITH_MKL
-IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
-    (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
-     TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
-   A%COLG(IP) = A%COL(IP) + L%CELL%NC_OFFSET(NM)
-ENDIF
-#endif
-      
-IP = IP + 1
+   !> CSR storage format
+   CASE(NSCARC_STORAGE_CSR)
+
+      AC => SCARC(NM)%SYSTEM(NL)%CSR%A
+
+      AC%VAL(IP) = AC%VAL(IP) - 2.0_EB/(C%DXL(IX-1)*C%DXL(IX))
+      IF (.NOT.TWO_D) AC%VAL(IP) = AC%VAL(IP) - 2.0_EB/(C%DYL(IY-1)*C%DYL(IY))
+      AC%VAL(IP) = AC%VAL(IP) - 2.0_EB/(C%DZL(IZ-1)*C%DZL(IZ))
+
+      AC%ROW(IC) = IP
+      AC%COL(IP) = IC
+
+      #ifdef WITH_MKL
+      IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
+          (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
+           TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
+         AC%COL_GLOBAL(IP) = AC%COL(IP) + L%CELL%NC_OFFSET(NM)
+      ENDIF
+      #endif
+
+      IP = IP + 1
+
+   !> CSR storage format
+   CASE(NSCARC_STORAGE_BANDED)
+
+      WRITE(*,*) 'TO FIX'
+
+END SELECT SELECT_STORAGE_TYPE
+
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG
 
 
@@ -4628,14 +4702,14 @@ INTEGER  :: IX, IY, IZ
 REAL(EB) :: DSCAL, DH1, DH2
 LOGICAL  :: BINTERNAL
 TYPE (SCARC_LEVEL_TYPE)  , POINTER :: L
-TYPE (SCARC_MATRIX_TYPE) , POINTER :: A
+TYPE (SCARC_STORAGE_CSR_TYPE),    POINTER :: AC
+TYPE (SCARC_STORAGE_BANDED_TYPE), POINTER :: AB
 
 L => SCARC(NM)%LEVEL(NL)
-A => SCARC(NM)%SYSTEM(NL)%A
 
 DH1 = L%FACE(IOR0)%DH(IPTR-1)
 DH2 = L%FACE(IOR0)%DH(IPTR)
-   
+
 !> set bounds and step sizes depending on orientation of face (lower or upper subdiagonal)
 IF (IOR0 > 0) THEN
    BINTERNAL = IPTR > 1
@@ -4645,47 +4719,61 @@ ELSE
    DSCAL = 2.0_EB/(DH2*(DH1+DH2))
 ENDIF
 
-!> if IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
-IF (BINTERNAL) THEN
+SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
 
-   IF (PRES_ON_WHOLE_DOMAIN .OR. NBR_TYPE == NSCARC_DISCRET_GASPHASE) THEN
-      A%VAL(IP) = A%VAL(IP) + DSCAL
-      A%COL(IP) = NBR_NUM
+   !> CSR storage format
+   CASE(NSCARC_STORAGE_CSR)
+
+      AC => SCARC(NM)%SYSTEM(NL)%CSR%A
+
+      !> if IC is an internal cell of the mesh, compute usual matrix contribution for corresponding subdiagonal
+      IF (BINTERNAL) THEN
+
+         IF (PRES_ON_WHOLE_DOMAIN .OR. NBR_TYPE == NSCARC_DISCRET_GASPHASE) THEN
+            AC%VAL(IP) = AC%VAL(IP) + DSCAL
+            AC%COL(IP) = NBR_NUM
 #ifdef WITH_MKL
-      IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
-          (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
-           TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
-         A%COLG(IP)= A%COL(IP) + L%CELL%NC_OFFSET(NM)
-      ENDIF
+            IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
+                (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
+                 TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
+               AC%COL_GLOBAL(IP)= AC%COL(IP) + L%CELL%NC_OFFSET(NM)
+            ENDIF
 #endif
-      IP = IP + 1
-   ELSE
-      WRITE(*,*) 'ACHTUNG: Fehlt! Nichts zu tun?'
-   ENDIF
-         
-!> if IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
-ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
-   
-   IF (HAS_NEIGHBOR(L%CELL%DOF, L%CELL%STATE, L%WALL, IC, IW, L%FACE(IOR0)%IWG_PTR, L%FACE(IOR0)%NFW)) THEN
-      A%VAL(IP) = A%VAL(IP) + DSCAL
-      A%COL(IP) = L%WALL(IW)%ICE(1)
-      !A%COL(IP) = L%WALL(IW)%ICO
-         
+            IP = IP + 1
+         ELSE
+            WRITE(*,*) 'ACHTUNG: Fehlt! Nichts zu tun?'
+         ENDIF
+
+      !> if IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
+      ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
+
+         IF (HAS_NEIGHBOR(L%CELL%DOF, L%CELL%STATE, L%WALL, IC, IW, L%FACE(IOR0)%IWG_PTR, L%FACE(IOR0)%NFW)) THEN
+            AC%VAL(IP) = AC%VAL(IP) + DSCAL
+            AC%COL(IP) = L%WALL(IW)%ICE(1)
+            !AC%COL(IP) = L%WALL(IW)%ICO
+
 #ifdef WITH_MKL
-      IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
-          (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
-           TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
-         IX = L%WALL(IW)%IXG
-         IY = L%WALL(IW)%IYG
-         IZ = L%WALL(IW)%IZG
-         A%COLG(IP) = L%CELL%DOF(IX, IY, IZ) + L%CELL%NC_OFFSET(L%WALL(IW)%NOM)
-      ENDIF
+            IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
+                (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
+                 TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
+               IX = L%WALL(IW)%IXG
+               IY = L%WALL(IW)%IYG
+               IZ = L%WALL(IW)%IZG
+               AC%COL_GLOBAL(IP) = L%CELL%DOF(IX, IY, IZ) + L%CELL%NC_OFFSET(L%WALL(IW)%NOM)
+            ENDIF
 #endif
-         
-      IP = IP + 1
-   ENDIF
-   
-ENDIF
+
+            IP = IP + 1
+         ENDIF
+
+      ENDIF
+
+   !> CSR storage format
+   CASE(NSCARC_STORAGE_BANDED)
+
+      WRITE(*,*) 'TO FIX'
+
+END SELECT SELECT_STORAGE_TYPE
 
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG
 
@@ -4713,7 +4801,7 @@ SEARCH_WALL_CELLS_LOOP: DO IW = IW0, IW0+IL0-1
   IYG0 = WALL0(IW)%IYG
   IZG0 = WALL0(IW)%IZG
 
-  IC0 = DOF0(IXW0, IYW0, IZW0) 
+  IC0 = DOF0(IXW0, IYW0, IZW0)
   IF (IC == IC0 .AND. (WALL0(IW)%NOM /= 0.AND.STATE0(IXG0, IYG0, IZG0)/=NSCARC_DISCRET_SOLID)) THEN
      HAS_NEIGHBOR = .TRUE.
      EXIT SEARCH_WALL_CELLS_LOOP
@@ -4757,7 +4845,7 @@ IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
 
    !> First check whether symmetry of system matrix is guaranteed
    DO IC = 1, L%NCS
-   
+
       COLUMN_LOOP: DO ICOL = A%ROW(IC)+1, A%ROW(IC+1)-1
          ICS = A%COL(ICOL)
          VAL = A%VAL(ICOL)
@@ -4777,7 +4865,7 @@ IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
              IF (.NOT.BSYM) CALL SCARC_SHUTDOWN('System matrix not symmetric ', 'NONE', NM)
          ENDIF
       ENDDO COLUMN_LOOP
-   
+
    ENDDO
 
    !> Compute number of entries in symmetric matrix
@@ -4788,7 +4876,7 @@ IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
             JC = A%COL(ICOL)
             IF (JC >= IC .AND. JC <= L%NCS) A%NAS = A%NAS+1   !really neccesary ???
          ELSE IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
-            JC = A%COLG(ICOL)
+            JC = A%COL_GLOBAL(ICOL)
             IF (JC >= IC + L%CELL%NC_OFFSET(NM)) A%NAS = A%NAS+1
          ELSE
             CALL SCARC_SHUTDOWN('Error in setup matrix, TYPE_LU_LEVEL = ', 'NONE', TYPE_LU_LEVEL(NL))
@@ -4806,10 +4894,12 @@ ENDIF
 !> ------------------------------------------------------------------------------------------------
 #ifdef WITH_MKL_FB
 ASYM => SCARC(NM)%SYSTEM(NL)%ASYM_FB
-CALL SCARC_ALLOCATE_MATRIX_FB(ASYM, A%NAS, A%NAS, A%NAR, A%NSTENCIL, NSCARC_INIT_ZERO, 'ASYM')
+WRITE(*,*) 'TO FIX!'
+!CALL SCARC_ALLOCATE_MATRIX_FB(ASYM, A%NAS, A%NAS, A%NAR, A%NSTENCIL, NSCARC_INIT_ZERO, 'ASYM')
 #else
 ASYM => SCARC(NM)%SYSTEM(NL)%ASYM
-CALL SCARC_ALLOCATE_MATRIX(ASYM, A%NAS, A%NAS, A%NAR, A%NSTENCIL, NSCARC_INIT_ZERO, 'ASYM')
+WRITE(*,*) 'TO FIX!'
+!CALL SCARC_ALLOCATE_MATRIX(ASYM, A%NAS, A%NAS, A%NAR, A%NSTENCIL, NSCARC_INIT_ZERO, 'ASYM')
 #endif
 
 IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
@@ -4833,7 +4923,7 @@ DO IC = 1, L%NCS
          JC = A%COL(ICOL)
 
             IF (JC >= IC .AND. JC <= L%NCS) THEN
-               ASYM%COL(IAS) = A%COL(ICOL) 
+               ASYM%COL(IAS) = A%COL(ICOL)
 #ifdef WITH_MKL_FB
                ASYM%VAL(IAS) = REAL(A%VAL(ICOL),FB)
 #else
@@ -4844,16 +4934,16 @@ DO IC = 1, L%NCS
       ENDDO
 
    !> global use of MKL solver
-   ELSE IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN   
+   ELSE IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
 
       !> store indices of all diagonal and upper-diagonal entries
       ICOL_AUX = 0
       JC_AUX   = 99999999
       ISYM = 1
-      JC0 = A%COLG(A%ROW(IC))
+      JC0 = A%COL_GLOBAL(A%ROW(IC))
       DO ICOL = A%ROW(IC), A%ROW(IC+1)-1
          !JC = A%COL(ICOL)
-         JC = A%COLG(ICOL)
+         JC = A%COL_GLOBAL(ICOL)
          IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
             IF (JC >= JC0) THEN
                ICOL_AUX(ISYM) = ICOL
@@ -4867,7 +4957,7 @@ DO IC = 1, L%NCS
          ENDIF
       ENDDO
       NSYM = ISYM - 1
-   
+
       !> sort them in increasing order (for the use of DSS-PARDISO functionality)
       JSYM = 1
       SORT_LOOP: DO WHILE (JSYM <= NSYM)
@@ -4882,7 +4972,7 @@ DO IC = 1, L%NCS
                ASYM%VAL(IAS) = A%VAL(ICOL)
 #endif
                !ASYM%COL(IAS) = A%COL(ICOL)
-               ASYM%COL(IAS) = A%COLG(ICOL)
+               ASYM%COL(IAS) = A%COL_GLOBAL(ICOL)
                JC_AUX(ISYM) = 99999999            ! mark entry as already used
                IAS  = IAS  + 1
             ENDIF
@@ -4893,14 +4983,14 @@ DO IC = 1, L%NCS
 ENDDO
 
 ASYM%ROW(L%NCS+1) = IAS
-ASYM%COL = ASYM%COL 
+ASYM%COL = ASYM%COL
 
 IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
     (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
      TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
    DEALLOCATE (ICOL_AUX, STAT=IERROR)
    DEALLOCATE (JC_AUX, STAT=IERROR)
-   DEALLOCATE (A%COLG, STAT=IERROR)
+   DEALLOCATE (A%COL_GLOBAL, STAT=IERROR)
 ENDIF
 
 CALL SCARC_LEAVE_ROUTINE()
@@ -5158,7 +5248,7 @@ NO_DIRIC_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
 
       !> store column indices and values of diagonal and all off-diagonal entries in last row
       !> index '1' correspondings to main diagonal entry
-      IS = IS + 1                                                  
+      IS = IS + 1
       ICOL = 1
       A%STORE(1)%PTR(ICOL)      = IP
       A%STORE(1)%COL(ICOL)      = A%COL(IP)
@@ -5172,14 +5262,14 @@ NO_DIRIC_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
          A%STORE(1)%VAL_ORIG(ICOL) = A%VAL(IP)
          A%STORE(1)%VAL_COND(ICOL) = 0.0_EB
       ENDDO
-  
+
       A%STORE(1)%NROW = NC              !> row index of last row
-      A%STORE(1)%NCOL = ICOL            !> number of stored columns 
+      A%STORE(1)%NCOL = ICOL            !> number of stored columns
 
       !> within last mesh: check which other cells have a connection to the last cell;
       !> in each corresponding matrix row store the column index and value of just that matrix entry
       !> for each direction only one value has to be stored
-      JC = NC - 1                                             
+      JC = NC - 1
       DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
          IF (A%COL(IP) == NC) THEN
             IS = IS + 1
@@ -5187,11 +5277,11 @@ NO_DIRIC_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
             A%STORE(IS)%COL(1)      = JC
             A%STORE(IS)%VAL_ORIG(1) = A%VAL(IP)
             A%STORE(IS)%VAL_COND(1) = 0.0_EB
-            A%STORE(IS)%NROW        = JC          
-            A%STORE(IS)%NCOL        = 1          
-            EXIT  
-         ENDIF 
-      ENDDO 
+            A%STORE(IS)%NROW        = JC
+            A%STORE(IS)%NCOL        = 1
+            EXIT
+         ENDIF
+      ENDDO
 
       JC = NC - L%NX
       DO IP = A%ROW(JC)+1, A%ROW(JC+1)-1
@@ -5201,11 +5291,11 @@ NO_DIRIC_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
             A%STORE(IS)%COL(1)      = JC
             A%STORE(IS)%VAL_ORIG(1) = A%VAL(IP)
             A%STORE(IS)%VAL_COND(1) = 0.0_EB
-            A%STORE(IS)%NROW        = JC          
-            A%STORE(IS)%NCOL        = 1          
-            EXIT  
-         ENDIF 
-      ENDDO 
+            A%STORE(IS)%NROW        = JC
+            A%STORE(IS)%NCOL        = 1
+            EXIT
+         ENDIF
+      ENDDO
 
       IF (.NOT.TWO_D) THEN
          JC = NC - L%NX * L%NY
@@ -5216,23 +5306,23 @@ NO_DIRIC_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
                A%STORE(IS)%COL(1)      = JC
                A%STORE(IS)%VAL_ORIG(1) = A%VAL(IP)
                A%STORE(IS)%VAL_COND(1) = 0.0_EB
-               A%STORE(IS)%NROW        = JC          
-               A%STORE(IS)%NCOL        = 1          
-               EXIT  
-            ENDIF 
-         ENDDO 
+               A%STORE(IS)%NROW        = JC
+               A%STORE(IS)%NCOL        = 1
+               EXIT
+            ENDIF
+         ENDDO
       ENDIF
 
    ENDIF LAST_CELL_IN_LAST_MESH_IF
 
-   !> cycle boundary cells to check if there is a periodic communication partner whose stencil is coupled 
-   !> with the last cell of last mesh; 
+   !> cycle boundary cells to check if there is a periodic communication partner whose stencil is coupled
+   !> with the last cell of last mesh;
    !> this can be a cell on the opposite side of the own mesh or on a different mesh
    !> if such a cell exists, store corresponding matrix entry
    WALL_CELLS_LOOP1: DO IW = 1, NW
 
       IOR0 = L%WALL(IW)%IOR
-      IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE              
+      IF (TWO_D .AND. ABS(IOR0) == 2) CYCLE
 
       I    = L%WALL(IW)%IXW
       J    = L%WALL(IW)%IYW
@@ -5256,11 +5346,11 @@ NO_DIRIC_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
                A%STORE(IS)%COL(1)      = ICN
                A%STORE(IS)%VAL_ORIG(1) = A%VAL(IP)
                A%STORE(IS)%VAL_COND(1) = 0.0_EB
-               A%STORE(IS)%NROW        = JC          
-               A%STORE(IS)%NCOL        = 1          
-               EXIT  
-            ENDIF 
-         ENDDO 
+               A%STORE(IS)%NROW        = JC
+               A%STORE(IS)%NCOL        = 1
+               EXIT
+            ENDIF
+         ENDDO
       ENDIF PERIODIC_NBR_IF1
    ENDDO WALL_CELLS_LOOP1
    A%NSTORE = IS
@@ -5297,7 +5387,7 @@ WALL_CELLS_LOOP2: DO IW = 1, NW
          DBC= C%DZI2
    END SELECT
 
-   !> SPD-matrix with mixture of Dirichlet and Neumann BC's according to the settings of BTYPE 
+   !> SPD-matrix with mixture of Dirichlet and Neumann BC's according to the settings of BTYPE
    IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0) THEN
 
       IP = A%ROW(IC)
@@ -5308,7 +5398,7 @@ WALL_CELLS_LOOP2: DO IW = 1, NW
             A%VAL(IP) = A%VAL(IP) + DBC
       END SELECT
 
-   !> purely Neumann matrix 
+   !> purely Neumann matrix
    ELSE
       IP = A%ROW(IC)
       IF (L%WALL(IW)%BTYPE == NEUMANN) A%VAL(IP) = A%VAL(IP) + DBC
@@ -5318,14 +5408,14 @@ ENDDO WALL_CELLS_LOOP2
 
 !> If there are no Dirichlet BC's transform sytem into condensed one by replacing the
 !> matrix entries in last column and row by the stored ones (zeros and one at diaonal position)
-SETUP_CONDENSING_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0 .AND. TYPE_PRECON /= NSCARC_RELAX_FFT) THEN
+SETUP_CONDENSED_IF: IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0 .AND. TYPE_PRECON /= NSCARC_RELAX_FFT) THEN
    DO IS = 1, A%NSTORE
       DO ICOL = 1, A%STORE(IS)%NCOL
          IP = A%STORE(IS)%PTR(ICOL)
          A%VAL(IP) = A%STORE(IS)%VAL_COND(ICOL)
       ENDDO
-   ENDDO 
-ENDIF SETUP_CONDENSING_IF
+   ENDDO
+ENDIF SETUP_CONDENSED_IF
 
 CALL SCARC_LEAVE_ROUTINE()
 END SUBROUTINE SCARC_SETUP_BOUNDARY
@@ -5348,7 +5438,7 @@ IF (N_DIRIC_GLOBAL(NLEVEL_MIN) > 0 .OR. TYPE_PRECON == NSCARC_RELAX_FFT) RETURN
 CALL SCARC_ENTER_ROUTINE('SCARC_SETUP_CONDENSING')
 
 !> In last mesh:
-!> Subtract B*RHS(end) for internal legs of stencil 
+!> Subtract B*RHS(end) for internal legs of stencil
 LOCAL_REAL = 0.0_EB
 IF (UPPER_MESH_INDEX == NMESHES) THEN
 
@@ -5381,13 +5471,13 @@ ENDDO
 
 
 !>
-!> Only in case of periodic BC's: 
+!> Only in case of periodic BC's:
 !> Subtract B*RHS(end) for corresponding entries of all periodic communication partners
 !>
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    SNODE = PROCESS(NM)
-   RNODE = PROCESS(NMESHES)                         
+   RNODE = PROCESS(NMESHES)
 
    OX => SCARC(NM)%OSCARC(NMESHES)%EXCHANGE
    IF (OX%NICMAX_S==0 .OR. OX%NICMAX_R==0) CYCLE             !> if there is no communication with last mesh, cycle
@@ -5401,7 +5491,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       IWL = OL%SUBDIVISION(1, FACE_ORIENTATION(IFACE))      !> first wall cell on this face
       NWL = OL%SUBDIVISION(2, FACE_ORIENTATION(IFACE))      !> number of wall cells on this face
-   
+
       DO IW = IWL, IWL + NWL - 1
 
          IWG = OL%MAP%IWL_TO_IWG(IW)                         !> corresponding global wall cell number
@@ -5443,7 +5533,7 @@ SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
 
       !> Setup preconditioner for Krylov solver
       NSTACK = NSTACK + 1
-      SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)                      
+      SELECT_KRYLOV_PRECON: SELECT CASE (TYPE_PRECON)
 
          CASE (NSCARC_RELAX_JACOBI)                                    !> Jacobi preconditioner
             STACK(NSTACK)%SOLVER => PRECON_JACOBI
@@ -5505,7 +5595,7 @@ SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
             END SELECT
 
             NSTACK = NSTACK + 1                                         !> coarse grid solver of MG-preconditioner
-            CALL SCARC_SETUP_COARSESOLVER(NSCARC_SCOPE_TWO, NSTACK, NLEVEL_MAX, NLEVEL_MAX)           
+            CALL SCARC_SETUP_COARSESOLVER(NSCARC_SCOPE_TWO, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
 
       END SELECT SELECT_KRYLOV_PRECON
 
@@ -5515,7 +5605,7 @@ SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
          CALL SCARC_SETUP_INTERPOLATION(NSCARC_SCOPE_ONE, NLEVEL_MIN+1, NLEVEL_MAX)
 
          NSTACK = NSTACK + 1
-         CALL SCARC_SETUP_COARSESOLVER(NSCARC_SCOPE_ONE, NSTACK, NLEVEL_MAX, NLEVEL_MAX)                     
+         CALL SCARC_SETUP_COARSESOLVER(NSCARC_SCOPE_ONE, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
 
       ENDIF
 
@@ -5555,7 +5645,7 @@ SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
       END SELECT
 
       NSTACK = NSTACK + 1                                              !> coarse grid solver
-      CALL SCARC_SETUP_COARSESOLVER(NSCARC_SCOPE_ONE, NSTACK, NLEVEL_MAX, NLEVEL_MAX)   
+      CALL SCARC_SETUP_COARSESOLVER(NSCARC_SCOPE_ONE, NSTACK, NLEVEL_MAX, NLEVEL_MAX)
 
 
 #ifdef WITH_MKL
@@ -5693,7 +5783,7 @@ TYP%TYPE_PRECISION = TYPE_PRECISION
 !> Preset iteration parameters for Krylov method
 SELECT CASE(NSOLVER)
 
-   CASE (NSCARC_SOLVER_MAIN)                               !> Used as main solver 
+   CASE (NSCARC_SOLVER_MAIN)                               !> Used as main solver
 
       SOL%CNAME = 'SCARC_MAIN_KRYLOV'
 
@@ -5703,7 +5793,7 @@ SELECT CASE(NSOLVER)
       TYP%TYPE_RELAX    = TYPE_PRECON                      !> use specified preconditioner
       TYP%TYPE_TWOLEVEL = TYPE_TWOLEVEL                    !> use specified number of levels
 
-   CASE (NSCARC_SOLVER_COARSE)                             !> Used as coarse grid solver 
+   CASE (NSCARC_SOLVER_COARSE)                             !> Used as coarse grid solver
 
       SOL%CNAME = 'SCARC_COARSE_KRYLOV'
 
@@ -5712,7 +5802,7 @@ SELECT CASE(NSOLVER)
 
       TYP%TYPE_RELAX    = NSCARC_RELAX_SSOR                !> only use SSOR-preconditioning for coarse solver
       TYP%TYPE_TWOLEVEL = NSCARC_TWOLEVEL_NONE             !> only use one level for coarse solver
- 
+
    CASE DEFAULT                                            !> No other choices possible
 
       CALL SCARC_SHUTDOWN('Error with input parameter ', 'NONE', NSOLVER)
@@ -5743,7 +5833,7 @@ TYP => SOL%TYPES
 !> Preset types for Multigrid method
 TYP%TYPE_METHOD    = NSCARC_METHOD_MULTIGRID
 TYP%TYPE_SOLVER    = NSOLVER
-TYP%TYPE_SCOPE     = NSCOPE 
+TYP%TYPE_SCOPE     = NSCOPE
 TYP%TYPE_NLMIN     = NLMIN
 TYP%TYPE_NLMAX     = NLMAX
 TYP%TYPE_RELAX     = TYPE_SMOOTH
@@ -5753,7 +5843,7 @@ TYP%TYPE_CYCLING   = TYPE_CYCLING
 TYP%TYPE_PRECISION = TYPE_PRECISION
 
 SELECT CASE(NSOLVER)
-   CASE (NSCARC_SOLVER_MAIN)                                  !> Used as main solver 
+   CASE (NSCARC_SOLVER_MAIN)                                  !> Used as main solver
       SOL%CNAME = 'SCARC_MAIN_MULTIGRID'
    CASE (NSCARC_SOLVER_PRECON)                                !> Used as preconditioner in Krylov-method
       SOL%CNAME = 'SCARC_PRECON_MULTIGRID'
@@ -5821,9 +5911,9 @@ CALL SCARC_ENTER_ROUTINE('SCARC_SETUP_LUDECOMP')
 
 SOL => STACK(NSTACK)%SOLVER
 SELECT CASE (NSOLVER)
-   CASE (NSCARC_SOLVER_MAIN) 
+   CASE (NSCARC_SOLVER_MAIN)
       SOL%CNAME = 'SCARC_MAIN_MKL'
-   CASE (NSCARC_SOLVER_COARSE) 
+   CASE (NSCARC_SOLVER_COARSE)
       SOL%CNAME = 'SCARC_COARSE_MKL'
    CASE DEFAULT
       CALL SCARC_SHUTDOWN('Error with input parameter ', 'NONE', NSOLVER)
@@ -5863,40 +5953,40 @@ CON => SOL%CONVREQS
 SELECT CASE(TYPE_PRECON)
    CASE (NSCARC_RELAX_JACOBI)
       SOL%CNAME = 'SCARC_PRECON_JACOBI'
-      CON%EPS   =  SCARC_PRECON_ACCURACY                
+      CON%EPS   =  SCARC_PRECON_ACCURACY
       CON%NIT   =  SCARC_PRECON_ITERATIONS
       CON%OMEGA =  SCARC_PRECON_OMEGA
    CASE (NSCARC_RELAX_SSOR)
       SOL%CNAME = 'SCARC_PRECON_SSOR'
-      CON%EPS   =  SCARC_PRECON_ACCURACY               
+      CON%EPS   =  SCARC_PRECON_ACCURACY
       CON%NIT   =  SCARC_PRECON_ITERATIONS
       CON%OMEGA =  SCARC_PRECON_OMEGA
    CASE (NSCARC_RELAX_FFT)
       SOL%CNAME = 'SCARC_PRECON_FFT'
-      CON%EPS   =  SCARC_PRECON_ACCURACY              
+      CON%EPS   =  SCARC_PRECON_ACCURACY
       CON%NIT   =  SCARC_PRECON_ITERATIONS
       !CON%OMEGA =  SCARC_PRECON_OMEGA
       CON%OMEGA = 1.0_EB
    CASE (NSCARC_RELAX_FFT_OVERLAP)
       SOL%CNAME = 'SCARC_PRECON_FFT_OVERLAP'
-      CON%EPS   =  SCARC_PRECON_ACCURACY              
+      CON%EPS   =  SCARC_PRECON_ACCURACY
       CON%NIT   =  SCARC_PRECON_ITERATIONS
       !CON%OMEGA =  SCARC_PRECON_OMEGA
       CON%OMEGA = 1.0_EB
 #ifdef WITH_MKL
    CASE (NSCARC_RELAX_PARDISO)
       SOL%CNAME = 'SCARC_PRECON_PARDISO'
-      CON%EPS   =  SCARC_PRECON_ACCURACY             
+      CON%EPS   =  SCARC_PRECON_ACCURACY
       CON%NIT   =  SCARC_PRECON_ITERATIONS
       !CON%OMEGA =  SCARC_PRECON_OMEGA
       CON%OMEGA = 1.0_EB
    CASE (NSCARC_RELAX_CLUSTER)
       SOL%CNAME = 'SCARC_PRECON_CLUSTER'
-      CON%EPS   =  SCARC_PRECON_ACCURACY            
+      CON%EPS   =  SCARC_PRECON_ACCURACY
       CON%NIT   = 1
       CON%OMEGA = 1.0_EB
 #endif
-   CASE DEFAULT                                 
+   CASE DEFAULT
       CALL SCARC_SHUTDOWN('Error with input parameter ', 'NONE', TYPE_PRECON)
 END SELECT
 
@@ -5913,11 +6003,11 @@ ELSE
 ENDIF
 
 !> Preset types for preconditioner
-TYP%TYPE_SOLVER    = TYPC%TYPE_SOLVER 
-TYP%TYPE_SCOPE     = TYPC%TYPE_SCOPE 
-TYP%TYPE_NLMIN     = TYPC%TYPE_NLMIN 
-TYP%TYPE_NLMAX     = TYPC%TYPE_NLMAX 
-TYP%TYPE_RELAX     = TYPC%TYPE_RELAX 
+TYP%TYPE_SOLVER    = TYPC%TYPE_SOLVER
+TYP%TYPE_SCOPE     = TYPC%TYPE_SCOPE
+TYP%TYPE_NLMIN     = TYPC%TYPE_NLMIN
+TYP%TYPE_NLMAX     = TYPC%TYPE_NLMAX
+TYP%TYPE_RELAX     = TYPC%TYPE_RELAX
 TYP%TYPE_INTERPOL  = TYPC%TYPE_INTERPOL
 TYP%TYPE_ACCURACY  = TYPC%TYPE_ACCURACY
 TYP%TYPE_PRECISION = TYPC%TYPE_PRECISION
@@ -5996,10 +6086,10 @@ ENDIF
 
 !> Preset types for preconditioner
 TYP%TYPE_SOLVER    = NSCARC_SOLVER_SMOOTH
-TYP%TYPE_SCOPE     = TYPC%TYPE_SCOPE 
-TYP%TYPE_NLMIN     = TYPC%TYPE_NLMIN  
-TYP%TYPE_NLMAX     = TYPC%TYPE_NLMAX  
-TYP%TYPE_RELAX     = TYPC%TYPE_RELAX  
+TYP%TYPE_SCOPE     = TYPC%TYPE_SCOPE
+TYP%TYPE_NLMIN     = TYPC%TYPE_NLMIN
+TYP%TYPE_NLMAX     = TYPC%TYPE_NLMAX
+TYP%TYPE_RELAX     = TYPC%TYPE_RELAX
 TYP%TYPE_INTERPOL  = TYPC%TYPE_INTERPOL
 TYP%TYPE_ACCURACY  = TYPC%TYPE_ACCURACY
 TYP%TYPE_PRECISION = TYPC%TYPE_PRECISION
@@ -6026,7 +6116,7 @@ CALL SCARC_LEAVE_ROUTINE()
 END SUBROUTINE SCARC_SETUP_SMOOTH
 
 !> ----------------------------------------------------------------------------------------------------
-!> Allocate and initialize vectors for additive or multiplicative coarse grid 
+!> Allocate and initialize vectors for additive or multiplicative coarse grid
 !> (corresponding to Schwarz domain decomposition method)
 !> ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_INTERPOLATION(NSCOPE, NLMIN, NLMAX)
@@ -6042,7 +6132,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       L   => SCARC(NM)%LEVEL(NL)
       SCO => SCARC(NM)%SCOPE(NSCOPE, NL)
-      
+
       CALL SCARC_ALLOCATE_REAL1(SCO%X, 1, L%NCE, NSCARC_INIT_ZERO, 'X')
       CALL SCARC_ALLOCATE_REAL1(SCO%F, 1, L%NCE, NSCARC_INIT_ZERO, 'F')
       CALL SCARC_ALLOCATE_REAL1(SCO%W, 1, L%NCE, NSCARC_INIT_ZERO, 'W')
@@ -6079,7 +6169,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       L => SCARC(NM)%LEVEL(NL)
       F => SCARC(NM)%FFT(NL)
       M => MESHES(NM)
-      
+
       !> Allocate working space for FFT routine
       F%LBC = M%LBC
       F%MBC = M%MBC
@@ -6108,7 +6198,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ELSE
          CALL SCARC_ALLOCATE_REAL3(F%PRHS, 1, L%NX+1, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'FFT')
       ENDIF
-      
+
       !> Allocate boundary data vector for XS
       IF (L%NZ>1) THEN
          IF (L%NY  > 1) CALL SCARC_ALLOCATE_REAL2(F%BXS, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'BXS')
@@ -6116,7 +6206,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BXS, 1, L%NY+1, 1, 1, NSCARC_INIT_ZERO, 'BXS')
       ENDIF
-      
+
       !> Allocate boundary data vector for XF
       IF (L%NZ>1) THEN
          IF (L%NY  > 1) CALL SCARC_ALLOCATE_REAL2(F%BXF, 1, L%NY+1, 1, L%NZ+1, NSCARC_INIT_ZERO, 'BXF')
@@ -6124,29 +6214,29 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BXF, 1, L%NY+1, 1, 1, NSCARC_INIT_ZERO, 'BXF')
       ENDIF
-      
+
       !> Allocate boundary data vector for YS
       IF (L%NZ > 1) THEN
          CALL SCARC_ALLOCATE_REAL2(F%BYS, 1, L%NX+1,1, L%NZ+1, NSCARC_INIT_ZERO, 'BYS')
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BYS, 1, L%NX+1,1,      1, NSCARC_INIT_ZERO, 'BYS')
       ENDIF
-      
+
       !> Allocate boundary data vector for YF
       IF (L%NZ > 1) THEN
          CALL SCARC_ALLOCATE_REAL2(F%BYF, 1, L%NX+1,1, L%NZ+1, NSCARC_INIT_ZERO, 'BYF')
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BYF, 1, L%NX+1,1,      1, NSCARC_INIT_ZERO, 'BYF')
       ENDIF
-      
+
       !> Allocate boundary data vector for ZS
       IF (L%NY  > 1) CALL SCARC_ALLOCATE_REAL2(F%BZS, 1, L%NX+1, 1, L%NY+1, NSCARC_INIT_ZERO, 'BZS')
       IF (L%NY == 1) CALL SCARC_ALLOCATE_REAL2(F%BZS, 1, L%NX+1, 1,      1, NSCARC_INIT_ZERO, 'BZS')
-      
+
       !> Allocate boundary data vector for ZF
       IF (L%NY  >1)  CALL SCARC_ALLOCATE_REAL2(F%BZF, 1, L%NX+1, 1, L%NY+1, NSCARC_INIT_ZERO, 'BZF')
       IF (L%NY == 1) CALL SCARC_ALLOCATE_REAL2(F%BZF, 1, L%NX+1, 1,      1, NSCARC_INIT_ZERO, 'BZF')
-      
+
       IF (TWO_D) THEN
          CALL H2CZIS(S%XS,S%XF,S%IBAR,F%LBC,S%ZS,S%ZF,S%KBAR,F%NBC,F%HX,F%XLM,F%ITRN,IERR,F%SAVE1)
       ELSE
@@ -6161,8 +6251,8 @@ CALL SCARC_LEAVE_ROUTINE()
 END SUBROUTINE SCARC_SETUP_FFT
 
 !> ----------------------------------------------------------------------------------------------------
-!> Still experimental code: 
-!> Perform FFT-preconditioning with one layer overlap 
+!> Still experimental code:
+!> Perform FFT-preconditioning with one layer overlap
 !> and use Dirichlet BC at internal (overlapping) boundaries
 !> ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_FFT_OVERLAP(NLMIN, NLMAX)
@@ -6183,7 +6273,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       L => SCARC(NM)%LEVEL(NL)
       F => SCARC(NM)%FFT(NL)
       M => MESHES(NM)
-      
+
       !> Allocate working space for FFT routine
       F%LBC = M%LBC
       F%MBC = M%MBC
@@ -6253,7 +6343,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ELSE
          CALL SCARC_ALLOCATE_REAL3(F%PRHS, 1, F%ITRN0, 1, F%JTRN0, 1, F%KTRN0, NSCARC_INIT_ZERO, 'FFT')
       ENDIF
-      
+
       !> Allocate boundary data vector for XS
       IF (L%NZ>1) THEN
          IF (L%NY  > 1) CALL SCARC_ALLOCATE_REAL2(F%BXS, 1, F%JTRN0, 1, F%KTRN0, NSCARC_INIT_ZERO, 'BXS')
@@ -6261,7 +6351,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BXS, 1, F%JTRN0, 1, 1, NSCARC_INIT_ZERO, 'BXS')
       ENDIF
-      
+
       !> Allocate boundary data vector for XF
       IF (L%NZ>1) THEN
          IF (L%NY  > 1) CALL SCARC_ALLOCATE_REAL2(F%BXF, 1, F%JTRN0, 1, F%KTRN0, NSCARC_INIT_ZERO, 'BXF')
@@ -6269,29 +6359,29 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BXF, 1, F%JTRN0, 1, 1, NSCARC_INIT_ZERO, 'BXF')
       ENDIF
-      
+
       !> Allocate boundary data vector for YS
       IF (L%NZ > 1) THEN
          CALL SCARC_ALLOCATE_REAL2(F%BYS, 1, F%ITRN0,1, F%KTRN0, NSCARC_INIT_ZERO, 'BYS')
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BYS, 1, F%ITRN0,1,       1, NSCARC_INIT_ZERO, 'BYS')
       ENDIF
-      
+
       !> Allocate boundary data vector for YF
       IF (L%NZ > 1) THEN
          CALL SCARC_ALLOCATE_REAL2(F%BYF, 1, F%ITRN0,1, F%KTRN0, NSCARC_INIT_ZERO, 'BYF')
       ELSE
          CALL SCARC_ALLOCATE_REAL2(F%BYF, 1, F%ITRN0,1,       1, NSCARC_INIT_ZERO, 'BYF')
       ENDIF
-      
+
       !> Allocate boundary data vector for ZS
       IF (L%NY  > 1) CALL SCARC_ALLOCATE_REAL2(F%BZS, 1, F%ITRN0, 1, F%JTRN0, NSCARC_INIT_ZERO, 'BZS')
       IF (L%NY == 1) CALL SCARC_ALLOCATE_REAL2(F%BZS, 1, F%ITRN0, 1,       1, NSCARC_INIT_ZERO, 'BZS')
-      
+
       !> Allocate boundary data vector for ZF
       IF (L%NY  >1)  CALL SCARC_ALLOCATE_REAL2(F%BZF, 1, F%ITRN0, 1, F%JTRN0, NSCARC_INIT_ZERO, 'BZF')
       IF (L%NY == 1) CALL SCARC_ALLOCATE_REAL2(F%BZF, 1, F%ITRN0, 1,       1, NSCARC_INIT_ZERO, 'BZF')
-      
+
       IF (TWO_D) THEN
          CALL H2CZIS(F%XS0,F%XF0,F%IBAR0,F%LBC,F%ZS0,F%ZF0,F%KBAR0,F%NBC,F%HX,F%XLM,F%ITRN0,IERR,F%SAVE1)
       ELSE
@@ -6336,16 +6426,16 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       !> Allocate workspace for parameters needed in MKL-routine
       CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL_IPARM')
-      
+
       !> Allocate workspace for pointers needed in MKL-routine
       IF (.NOT.ALLOCATED(MKL%CT)) THEN
-         ALLOCATE(MKL%CT(64), STAT=IERROR) 
+         ALLOCATE(MKL%CT(64), STAT=IERROR)
          CALL CHKMEMERR ('SCARC', 'CT', IERROR)
          DO I=1,64
             MKL%CT(I)%DUMMY = 0
          ENDDO
       ENDIF
-      
+
       !> Define corresponding parameters
       !> Note: IPARM-vectory is allocate from 1:64, not from 0:63
       MKL%NRHS   =  1         ! one right hand side
@@ -6380,7 +6470,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       !MKL%IPARM(39) = 2                                            ! provide matrix in distributed format
       !MKL%IPARM(40) = L%CELL%NC_OFFSET(NM)+1                       ! first global cell number for mesh NM
       !MKL%IPARM(41) = L%CELL%NC_OFFSET(NM)+L%CELL%NC_LOCAL(NM)     ! last global cell number for mesh NM
-    
+
 #ifdef WITH_MKL_FB
       ASYM => SCARC(NM)%SYSTEM(NL)%ASYM_FB
       MKL%IPARM(28)=1         ! single precision
@@ -6390,13 +6480,13 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%CELL%NC_GLOBAL, &
                                    ASYM%VAL, ASYM%ROW, ASYM%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
                                    MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
-                     
+
       ! perform only factorization
-      MKL%PHASE = 22 
+      MKL%PHASE = 22
       CALL CLUSTER_SPARSE_SOLVER_S(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%CELL%NC_GLOBAL, &
                                    ASYM%VAL, ASYM%ROW, ASYM%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
                                    MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
-         
+
 #else
       ASYM => SCARC(NM)%SYSTEM(NL)%ASYM
       MKL%IPARM(28)=0         ! double precision
@@ -6406,13 +6496,13 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%CELL%NC_GLOBAL, &
                                    ASYM%VAL, ASYM%ROW, ASYM%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
                                    MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
-                     
+
       ! perform only factorization
-      MKL%PHASE = 22 
+      MKL%PHASE = 22
       CALL CLUSTER_SPARSE_SOLVER_D(MKL%CT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%CELL%NC_GLOBAL, &
                                    ASYM%VAL, ASYM%ROW, ASYM%COL, MKL%PERM, MKL%NRHS, MKL%IPARM, &
                                    MKL%MSGLVL, DUMMY, DUMMY, MPI_COMM_WORLD, MKL%ERROR)
-               
+
 #endif
 
    ENDDO LEVEL_LOOP
@@ -6427,7 +6517,7 @@ END SUBROUTINE SCARC_SETUP_CLUSTER
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_PARDISO(NLMIN, NLMAX)
 INTEGER, INTENT(IN) :: NLMIN, NLMAX
-INTEGER :: NM, NL, I, IDUMMY(1)=0 
+INTEGER :: NM, NL, I, IDUMMY(1)=0
 REAL (EB) :: TNOW
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L
 TYPE (SCARC_MKL_TYPE)  , POINTER :: MKL
@@ -6447,25 +6537,25 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       L    => SCARC(NM)%LEVEL(NL)
       MKL  => SCARC(NM)%MKL(NL)
-      
+
       !> Allocate workspace for parameters needed in MKL-routine
       CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL_IPARM')
-      
+
       !> Allocate workspace for pointers needed in MKL-routine
       IF (.NOT.ALLOCATED(MKL%PT)) THEN
-         ALLOCATE(MKL%PT(64), STAT=IERROR) 
+         ALLOCATE(MKL%PT(64), STAT=IERROR)
          CALL CHKMEMERR ('SCARC', 'PT', IERROR)
          DO I=1,64
             MKL%PT(I)%DUMMY = 0
          ENDDO
       ENDIF
-      
-      !> Define corresponding parameters 
+
+      !> Define corresponding parameters
       !> Note: IPARM-vectory is allocate from 1:64, not from 0:63
       MKL%NRHS   = 1
       MKL%MAXFCT = 1
       MKL%MNUM   = 1
-      
+
       MKL%IPARM(1)  =  1      ! no solver default
       MKL%IPARM(2)  =  3      ! parallel (OpenMP) version of the nested dissection algorithm
       MKL%IPARM(4)  =  0      ! factorization computed as required by phase
@@ -6480,11 +6570,11 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MKL%IPARM(20) =  1      ! Output: Numbers of CG Iterations
       MKL%IPARM(27) =  1      ! use matrix checker
       MKL%IPARM(37) =  0      ! matrix storage in CSR-format
-      
+
       MKL%ERROR  =  0         ! initialize error flag
       MKL%MSGLVL =  0         ! do not print statistical information
       MKL%MTYPE  = -2         ! Matrix type real non-symmetric
-      
+
 #ifdef WITH_MKL_FB
       ASYM => SCARC(NM)%SYSTEM(NL)%ASYM_FB
       MKL%IPARM(28)=1         ! single precision
@@ -6493,9 +6583,9 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MKL%PHASE = 11
       CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%NCS, ASYM%VAL, ASYM%ROW, ASYM%COL, &
                      IDUMMY, MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
-                     
+
       ! perform only Factorization
-      MKL%PHASE = 22 
+      MKL%PHASE = 22
       CALL PARDISO_S(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%NCS, ASYM%VAL, ASYM%ROW, ASYM%COL, &
                      IDUMMY, MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
 
@@ -6507,9 +6597,9 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       MKL%PHASE = 11
       CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%NCS, ASYM%VAL, ASYM%ROW, ASYM%COL, &
                      IDUMMY, MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
-                     
+
       ! perform only Factorization
-      MKL%PHASE = 22 
+      MKL%PHASE = 22
       CALL PARDISO_D(MKL%PT, MKL%MAXFCT, MKL%MNUM, MKL%MTYPE, MKL%PHASE, L%NCS, ASYM%VAL, ASYM%ROW, ASYM%COL, &
                      IDUMMY, MKL%NRHS, MKL%IPARM, MKL%MSGLVL, DUMMY, DUMMY, MKL%ERROR)
 
@@ -6517,7 +6607,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    ENDDO LEVEL_LOOP
 ENDDO MESHES_LOOP
-      
+
 CALL SCARC_LEAVE_ROUTINE()
 TSETUP(MYID+1)%PARDISO=TSETUP(MYID+1)%PARDISO+CURRENT_TIME()-TNOW
 END SUBROUTINE SCARC_SETUP_PARDISO
@@ -6559,7 +6649,7 @@ SELECT CASE (NTYPE)
          ENDIF
 
          A%NAV = L%NCS * A%NSTENCIL
-         A%NAC = A%NAV 
+         A%NAC = A%NAV
          A%NAR = L%NCS + 1
          A%NAS = L%NCS * A%NSTENCIL
 
@@ -6580,29 +6670,29 @@ SELECT CASE (NTYPE)
       !> Determine extended sizes for extended prolongation and restriction matrix (AMG only)
       IF (BAMG) THEN
          LEVEL_SYSTEM_MESHES_LOOP2: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-   
+
             L => SCARC(NM)%LEVEL(NL)
             A => SCARC(NM)%SYSTEM(NL)%A
             A%NAE = A%NAV
-   
+
             CALL SCARC_ALLOCATE_INT2(L%AMG%MAPPING, 1, 3, L%NCS+1, 2*L%NCE, NSCARC_INIT_ZERO, 'AMG%MAP')
-   
+
             LEVEL_OTHER_MESHES_LOOP2: DO NOM = 1, NMESHES
-   
+
                !IF (NOM == NM) CYCLE LEVEL_OTHER_MESHES_LOOP2
                OS => SCARC(NM)%OSCARC(NOM)
                OL => SCARC(NM)%OSCARC(NOM)%LEVEL(NL)
                OA => SCARC(NM)%OSCARC(NOM)%SYSTEM(NL)%A
                OX => OS%EXCHANGE
                IF (OX%NICMAX_S==0 .AND. OX%NICMAX_R==0) CYCLE LEVEL_OTHER_MESHES_LOOP2
-   
+
                OA => OS%SYSTEM(NL)%A
                A%NAE  = A%NAE  + OA%NAV
-   
+
                CALL SCARC_ALLOCATE_INT1(OA%STENCIL, 1, OL%NCG, NSCARC_INIT_ZERO, 'OA_STENCIL')
-   
+
             ENDDO LEVEL_OTHER_MESHES_LOOP2
-   
+
          ENDDO LEVEL_SYSTEM_MESHES_LOOP2
       ENDIF
 
@@ -6855,7 +6945,8 @@ LEVEL_LOOP: DO NL = NLEVEL_MIN, NLEVEL_MAX-1
       CALL SCARC_ALLOCATE_INT1 (AMG%MARKER , 1, L%NCE, NSCARC_INIT_UNDEFINED, 'MARKER')
 
       CALL SCARC_COPY_MATRIX(A, S, 'S')
-      CALL SCARC_ALLOCATE_MATRIX(ST, A%NAC+50, A%NAR+50, A%NAC+50, A%NSTENCIL, NSCARC_INIT_ZERO, 'ST')
+      WRITE(*,*) 'TO FIX!'
+      !CALL SCARC_ALLOCATE_MATRIX(ST, A%NAC+50, A%NAR+50, A%NAC+50, A%NSTENCIL, NSCARC_INIT_ZERO, 'ST')
 
       OTHER_MESH_INDEX1: DO NOM = 1, NMESHES
 
@@ -6906,9 +6997,10 @@ LEVEL_LOOP: DO NL = NLEVEL_MIN, NLEVEL_MAX-1
       P => SCARC(NM)%SYSTEM(NL)%P
       R => SCARC(NM)%SYSTEM(NL)%R
 
-      !> allocate prolongation and restriction matrix 
-      CALL SCARC_ALLOCATE_MATRIX(P, L%AMG%NPE, L%AMG%NPE, L%NCE     , -1, NSCARC_INIT_ZERO, 'P')
-      CALL SCARC_ALLOCATE_MATRIX(R, L%AMG%NRE, L%AMG%NRE, L%AMG%NCCE, -1, NSCARC_INIT_ZERO, 'P')
+      !> allocate prolongation and restriction matrix
+      WRITE(*,*) 'TO FIX!'
+      !CALL SCARC_ALLOCATE_MATRIX(P, L%AMG%NPE, L%AMG%NPE, L%NCE     , -1, NSCARC_INIT_ZERO, 'P')
+      !CALL SCARC_ALLOCATE_MATRIX(R, L%AMG%NRE, L%AMG%NRE, L%AMG%NCCE, -1, NSCARC_INIT_ZERO, 'P')
 
       !> allocate auxiliary tag arrays to mark relevant positions in A and P
       CALL SCARC_ALLOCATE_INT1(A%TAG, 1, L%NCE , NSCARC_INIT_ZERO, 'ATAG')
@@ -6925,8 +7017,9 @@ LEVEL_LOOP: DO NL = NLEVEL_MIN, NLEVEL_MAX-1
          OP => SCARC(NM)%OSCARC(NOM)%SYSTEM(NL)%P
          OR => SCARC(NM)%OSCARC(NOM)%SYSTEM(NL)%R
 
-         CALL SCARC_ALLOCATE_MATRIX(OP, OL%AMG%NP+10, OL%AMG%NP+10, OL%NC+10, -1, NSCARC_INIT_ZERO, 'OP')
-         CALL SCARC_ALLOCATE_MATRIX(OR, OL%AMG%NP+10, OL%AMG%NP+10, OL%NC+10, -1, NSCARC_INIT_ZERO, 'OR')   !
+         WRITE(*,*) 'TO FIX!'
+         !CALL SCARC_ALLOCATE_MATRIX(OP, OL%AMG%NP+10, OL%AMG%NP+10, OL%NC+10, -1, NSCARC_INIT_ZERO, 'OP')
+         !CALL SCARC_ALLOCATE_MATRIX(OR, OL%AMG%NP+10, OL%AMG%NP+10, OL%NC+10, -1, NSCARC_INIT_ZERO, 'OR')   !
 
       ENDDO OTHER_MESH_INDEX2
    ENDDO
@@ -8083,7 +8176,7 @@ END SUBROUTINE SCARC_SETUP_GRAPHSET
 !            S%COL(IA) = A%COL(IA)
 !         ENDDO
 !
-!         !> this part may be changed for other coarsening strategies 
+!         !> this part may be changed for other coarsening strategies
 !         ICOUNT = 1
 !         FALGOUT_CELL_LOOP: DO IC = 1, L%NC
 !            IF (L%AMG%CTYPE(IC) == NSCARC_CELL_TYPE_FINE) THEN
@@ -9095,10 +9188,10 @@ MESHES_LOOP_SYSTEM_AMG: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    IROW = 1
 
-!> 
+!>
 !> Still experimental code:
 !> First look at all exterior entries
-!> 
+!>
 !>  IF (LC%NW > 0) THEN
 !>
 !>     LOOP_NBR_CELLS: DO IC0 = 1, L%AMG%NCC
@@ -9206,7 +9299,7 @@ MESHES_LOOP_SYSTEM_AMG: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    AC%NAV = IROW
    AC%NAE = AC%NAV + 100  !> ONLY TEMPORARILY
 
-   CALL SCARC_ALLOCATE_MATRIX(AC, AC%NAE+1, AC%NAE+1, LC%NCE+1, -1, NSCARC_INIT_ZERO, 'AC')
+   !CALL SCARC_ALLOCATE_MATRIX(AC, AC%NAE+1, AC%NAE+1, LC%NCE+1, -1, NSCARC_INIT_ZERO, 'AC')
    AC%ROW(LF%AMG%NCC+1) = IROW
 
    AF%TAG = 0
@@ -9599,16 +9692,16 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
    CASE (NSCARC_METHOD_LUDECOMP)
 
       SELECT_MKL: SELECT CASE (TYPE_LUDECOMP)
-         CASE (NSCARC_MKL_GLOBAL) 
+         CASE (NSCARC_MKL_GLOBAL)
             CALL SCARC_METHOD_CLUSTER(NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
-         CASE (NSCARC_MKL_LOCAL) 
+         CASE (NSCARC_MKL_LOCAL)
             CALL SCARC_METHOD_PARDISO(NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
       END SELECT SELECT_MKL
 #endif
 
 END SELECT SELECT_METHOD
 
-IF (STOP_STATUS==SETUP_STOP) RETURN    
+IF (STOP_STATUS==SETUP_STOP) RETURN
 
 CALL SCARC_LEAVE_ROUTINE()
 T_USED(5)=T_USED(5)+CURRENT_TIME()-TNOW
@@ -9750,18 +9843,18 @@ TYPE (SCARC_MATRIX_TYPE), POINTER:: A
 TNOW = CURRENT_TIME()
 CALL SCARC_ENTER_ROUTINE('SCARC_MATVEC_PRODUCT')
 
-!>    
+!>
 !> Exchange internal boundary values of vector1 such that the ghost values contain the corresponding
 !> overlapped values of adjacent neighbor
 !>
 TYPE_VECTOR = NVECTOR1
 CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR, NL)
 
-!> 
+!>
 !> Perform global matrix-vector product:
 !> Note: - matrix already contains subdiagonal values from neighbor along internal boundaries
 !>       - if vector1 contains neighboring values, then correct values of global matvec are achieved
-!> 
+!>
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    V1 => POINT_TO_VECTOR (NVECTOR1, NM, NL)
@@ -9823,7 +9916,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 #if defined(WITH_MKL)
    LOCAL_REAL(NM) = DDOT(NC, V1, 1, V2, 1)
-#else   
+#else
    LOCAL_REAL(NM) = 0.0_EB
    DO IC = 1, NC
       LOCAL_REAL(NM) = LOCAL_REAL(NM) + V1(IC) * V2(IC)
@@ -10109,7 +10202,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
       ENDDO
 
    !> ----------------------------------------------------------------------------------------
-   !> Preconditioning by blockwise Geometric Multigrid 
+   !> Preconditioning by blockwise Geometric Multigrid
    !> ----------------------------------------------------------------------------------------
    CASE (NSCARC_RELAX_MULTIGRID)
 
@@ -10125,7 +10218,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR, NL)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-        
+
          M  => MESHES(NM)
 
          V1  => POINT_TO_VECTOR(NV1, NM, NL)
@@ -10207,7 +10300,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR, NL)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-        
+
          M  => MESHES(NM)
 
          V1  => POINT_TO_VECTOR(NV1, NM, NL)
@@ -10300,17 +10393,17 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
             IF (WC%NOM == 123456) THEN
                SELECT CASE(WC%IOR)
                   CASE ( 1)
-                     V2(ICE) = F%PRHS(    1, IYW, IZW) 
+                     V2(ICE) = F%PRHS(    1, IYW, IZW)
                   CASE (-1)
-                     V2(ICE) = F%PRHS(F%IBAR0, IYW, IZW) 
+                     V2(ICE) = F%PRHS(F%IBAR0, IYW, IZW)
                   CASE ( 2)
-                     V2(ICE) = F%PRHS(IXW,     1, IZW) 
+                     V2(ICE) = F%PRHS(IXW,     1, IZW)
                   CASE (-2)
-                     V2(ICE) = F%PRHS(IXW, F%JBAR0, IZW) 
+                     V2(ICE) = F%PRHS(IXW, F%JBAR0, IZW)
                   CASE ( 3)
-                     V2(ICE) = F%PRHS(IXW, IYW,     1) 
+                     V2(ICE) = F%PRHS(IXW, IYW,     1)
                   CASE (-3)
-                     V2(ICE) = F%PRHS(IXW, IYW, F%KBAR0) 
+                     V2(ICE) = F%PRHS(IXW, IYW, F%KBAR0)
                END SELECT
             ENDIF
          ENDDO
@@ -10323,7 +10416,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
    CASE (NSCARC_RELAX_CLUSTER)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-      
+
          L   => SCARC(NM)%LEVEL(NL)
          MKL => SCARC(NM)%MKL(NL)
          NC  => SCARC(NM)%LEVEL(NL)%NCS
@@ -10357,7 +10450,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
                                       MKL%MSGLVL, V1, V2, MPI_COMM_WORLD, MKL%ERROR)
 #endif
          IF (MKL%ERROR /= 0) CALL SCARC_SHUTDOWN('The following MKL-error was detected ', 'NONE', MKL%ERROR)
-      
+
       ENDDO
 
    !> ----------------------------------------------------------------------------------------
@@ -10366,7 +10459,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
    CASE (NSCARC_RELAX_PARDISO)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-      
+
          L   => SCARC(NM)%LEVEL(NL)
          MKL => SCARC(NM)%MKL(NL)
          NC  => SCARC(NM)%LEVEL(NL)%NCS
@@ -10402,7 +10495,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
 
 #endif
          IF (MKL%ERROR /= 0) CALL SCARC_SHUTDOWN('The following MKL-error was detected ', 'NONE', MKL%ERROR)
-      
+
       ENDDO
 
 #endif
@@ -10445,7 +10538,7 @@ CALL SCARC_SETUP_WORKSPACE(NSTACK, NLEVEL)
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    L    => SCARC(NM)%LEVEL(NL)
-   MKL  => SCARC(NM)%MKL(NL)                      
+   MKL  => SCARC(NM)%MKL(NL)
 
    MKL%PHASE  = 33                                !> only solving
 
@@ -10573,7 +10666,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 ENDDO MESHES_LOOP
 
 !CALL SCARC_VECTOR_SUM(X, E, 1.0_EB, -1.0_EB, NLEVEL)
-!ERR = SCARC_L2NORM (E, NLEVEL)                                        
+!ERR = SCARC_L2NORM (E, NLEVEL)
 !CALL SCARC_DUMP_RESIDUAL(0, NLEVEL)
 
 IF (TYPE_SOLVER == NSCARC_SOLVER_MAIN) THEN
@@ -10859,11 +10952,11 @@ SELECT CASE (TYPE_TWOLEVEL)
    !> --------------------------------------------------------------------
    CASE (NSCARC_TWOLEVEL_NONE)
 
-      CALL SCARC_VECTOR_COPY (W, G, 1.0_EB, NL)                   !>  G := W 
+      CALL SCARC_VECTOR_COPY (W, G, 1.0_EB, NL)                   !>  G := W
       CALL SCARC_BLOCK_SOLVER (W, G, NS+1, NP, NL)                !>  G := PRECON(W)
 
    !> --------------------------------------------------------------------
-   !> additive two-level preconditioning 
+   !> additive two-level preconditioning
    !> --------------------------------------------------------------------
    CASE (NSCARC_TWOLEVEL_ADD)
 
@@ -10879,7 +10972,7 @@ SELECT CASE (TYPE_TWOLEVEL)
       CALL SCARC_VECTOR_COPY (W, G, 1.0_EB, NL)                   !>  G := W
       CALL SCARC_BLOCK_SOLVER (W, G, NS+1, NP, NL)                !>  G := PRECON(W)
 
-      CALL SCARC_VECTOR_SUM (Z, G, 1.0_EB, 1.0_EB, NL)            !>  G := Z + G 
+      CALL SCARC_VECTOR_SUM (Z, G, 1.0_EB, 1.0_EB, NL)            !>  G := Z + G
 
    !> --------------------------------------------------------------------
    !> multiplicative two-level preconditioning (coarse first, fine second)
@@ -10936,7 +11029,7 @@ SELECT CASE (TYPE_TWOLEVEL)
       ENDDO
       CALL SCARC_VECTOR_COPY (Y, G, 1.0_EB, NL)                   !>  G := W
 
-END SELECT 
+END SELECT
 CALL SCARC_LEAVE_ROUTINE()
 END SUBROUTINE SCARC_PRECONDITIONER
 
@@ -11240,7 +11333,7 @@ SMOOTH_LOOP: DO ITE=1, NIT
 
    IF (BL2NORM.OR.ITE==NIT) THEN
       RES = SCARC_L2NORM (D, NL)                                        !>  RES := ||D||
-      NSTATE = SCARC_CONVERGENCE_STATE(NTYPE, NL)  
+      NSTATE = SCARC_CONVERGENCE_STATE(NTYPE, NL)
       IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT SMOOTH_LOOP              !>  RES < TOL ?
    ENDIF
 
@@ -11288,7 +11381,7 @@ IF (NPARENT > 0) THEN
    CONP%ITE   = ITE
    CONP%RES   = RES
    CONP%RESIN = RESIN
-   CONP%ERR   = ERR  
+   CONP%ERR   = ERR
    CONP%CAPPA = CAPPA
 ENDIF
 
@@ -11338,7 +11431,7 @@ CON => STACK(NSTACK)%SOLVER%CONVREQS
 CON%RESIN = RESIN
 CON%RES   = RES
 CON%ITE   = ITE
-CON%ERR   = ERR  
+CON%ERR   = ERR
 
 !> if not first solver in stack, reset environment of parent (calling) routine
 IF (NPARENT > 0) THEN
@@ -11431,22 +11524,22 @@ TYP => SOL%TYPES
 
 SELECT CASE (TYP%TYPE_SOLVER)
 
-   !> --------------- IF used as main solver use values from pres-routine as initialization 
-   CASE (NSCARC_SOLVER_MAIN) 
+   !> --------------- IF used as main solver use values from pres-routine as initialization
+   CASE (NSCARC_SOLVER_MAIN)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-  
+
          M  => MESHES(NM)
          L  => SCARC(NM)%LEVEL(NL)
          SC => SCARC(NM)%SCOPE(TYP%TYPE_SCOPE, NL)
-      
+
          PRHS => M%PRHS
          IF (PREDICTOR) THEN
             HP => M%H
          ELSE
             HP => M%HS
          ENDIF
- 
+
          !> get right hand side (PRHS from pres.f90) and initial vector (H or HS from last time step)
          DO K = 1, M%KBAR
             DO J = 1, M%JBAR
@@ -11482,13 +11575,13 @@ SELECT CASE (TYP%TYPE_SOLVER)
 
                SELECT CASE (IOR0)
                   CASE (1)
-                     VAL = - 2.0_EB * L%COORD%DXI2 * M%BXS(J,K) 
+                     VAL = - 2.0_EB * L%COORD%DXI2 * M%BXS(J,K)
                   CASE (-1)
-                     VAL = - 2.0_EB * L%COORD%DXI2 * M%BXF(J,K) 
+                     VAL = - 2.0_EB * L%COORD%DXI2 * M%BXF(J,K)
                   CASE (2)
                      VAL = - 2.0_EB * L%COORD%DYI2 * M%BYS(I,K)
                   CASE (-2)
-                     VAL = - 2.0_EB * L%COORD%DYI2 * M%BYF(I,K) 
+                     VAL = - 2.0_EB * L%COORD%DYI2 * M%BYF(I,K)
                   CASE (3)
                      VAL = - 2.0_EB * L%COORD%DZI2 * M%BZS(I,J)
                   CASE (-3)
@@ -11511,17 +11604,17 @@ SELECT CASE (TYP%TYPE_SOLVER)
 
                SELECT CASE (IOR0)
                   CASE (1)
-                     VAL =   L%COORD%DXI * M%BXS(J,K)        
+                     VAL =   L%COORD%DXI * M%BXS(J,K)
                   CASE (-1)
-                     VAL = - L%COORD%DXI * M%BXF(J,K)       
+                     VAL = - L%COORD%DXI * M%BXF(J,K)
                   CASE (2)
-                     VAL =   L%COORD%DYI * M%BYS(I,K)      
+                     VAL =   L%COORD%DYI * M%BYS(I,K)
                   CASE (-2)
-                     VAL = - L%COORD%DYI * M%BYF(I,K)     
+                     VAL = - L%COORD%DYI * M%BYF(I,K)
                   CASE (3)
-                     VAL =   L%COORD%DZI * M%BZS(I,J)    
+                     VAL =   L%COORD%DZI * M%BZS(I,J)
                   CASE (-3)
-                     VAL = - L%COORD%DZI * M%BZF(I,J)   
+                     VAL = - L%COORD%DZI * M%BZF(I,J)
                END SELECT
 
                SC%F(IC) = SC%F(IC) + VAL
@@ -11530,7 +11623,7 @@ SELECT CASE (TYP%TYPE_SOLVER)
 
          ENDDO LEVEL_WALL_CELLS_LOOP
       ENDDO
-   
+
       !> In case of a Krylov method clear overlapping parts of auxiliary vectors
       IF (BCG.OR.BTWOLEVEL) THEN
          DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
@@ -11572,7 +11665,7 @@ SELECT CASE (TYP%TYPE_SOLVER)
       ENDIF
 
 
-   !> --------------- If MG is used as Krylov-preconditioner, vector G of main Krylov is the RHS for MG 
+   !> --------------- If MG is used as Krylov-preconditioner, vector G of main Krylov is the RHS for MG
    CASE (NSCARC_SOLVER_PRECON)
 
       IF (BCGGMG) THEN
@@ -11585,7 +11678,7 @@ SELECT CASE (TYP%TYPE_SOLVER)
          ENDDO
       ENDIF
 
-   !> --------------- If used as coarse grid solver start with zero initialization 
+   !> --------------- If used as coarse grid solver start with zero initialization
    !> ACHTUNG: Löschen der Vektoren nur fuer iterativn Coarse-Solver noetig !
    CASE (NSCARC_SOLVER_COARSE)
 
@@ -11597,7 +11690,7 @@ SELECT CASE (TYP%TYPE_SOLVER)
          SC%W = 0.0_EB
          SC%Y = 0.0_EB
          SC%Z = 0.0_EB
-      ENDDO         
+      ENDDO
 
 END SELECT
 CALL SCARC_LEAVE_ROUTINE()
@@ -11734,7 +11827,7 @@ IF (BMULTILEVEL) THEN
       IF (TWO_D) THEN
 
          SELECT_INTERPOL: SELECT CASE (TYPE_INTERPOL)
-  
+
             CASE (NSCARC_INTERPOL_CONSTANT)
 
                DO IZC = 1, NZC
@@ -11745,12 +11838,12 @@ IF (BMULTILEVEL) THEN
                      IXF = 2*IXC
                      IZF = 2*IZC
 
-                     ICC = CC%DOF(IXC, 1, IZC) 
+                     ICC = CC%DOF(IXC, 1, IZC)
 
-                     ICF(1) = CF%DOF(IXF-1, 1, IZF-1) 
-                     ICF(2) = CF%DOF(IXF-1, 1, IZF  ) 
-                     ICF(3) = CF%DOF(IXF  , 1, IZF-1) 
-                     ICF(4) = CF%DOF(IXF  , 1, IZF  ) 
+                     ICF(1) = CF%DOF(IXF-1, 1, IZF-1)
+                     ICF(2) = CF%DOF(IXF-1, 1, IZF  )
+                     ICF(3) = CF%DOF(IXF  , 1, IZF-1)
+                     ICF(4) = CF%DOF(IXF  , 1, IZF  )
 
                      VC(ICC) = 0.25_EB * (  VF(ICF(1)) &
                                           + VF(ICF(2)) &
@@ -11760,39 +11853,39 @@ IF (BMULTILEVEL) THEN
                ENDDO
 
             CASE (NSCARC_INTERPOL_BILINEAR)
-    
+
                VC=0.0_EB
-      
+
                DO IZC = 1, NZC
                   DO IXC = 1, NXC
-                     
+
                      IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. CC%STATE(IXC,1,IZC)/=NSCARC_DISCRET_GASPHASE) CYCLE
-         
+
                      IXF = 2*IXC
                      IZF = 2*IZC
-         
-                     ICC = CC%DOF(IXC, 1, IZC) 
-         
-                     ICFB(-2,-2) = CF%DOF(IXF-2, 1, IZF-2) 
-                     ICFB(-1,-2) = CF%DOF(IXF-1, 1, IZF-2) 
-                     ICFB( 1,-2) = CF%DOF(IXF  , 1, IZF-2) 
-                     ICFB( 2,-2) = CF%DOF(IXF+1, 1, IZF-2) 
-      
-                     ICFB(-2,-1) = CF%DOF(IXF-2, 1, IZF-1) 
-                     ICFB(-1,-1) = CF%DOF(IXF-1, 1, IZF-1) 
-                     ICFB( 1,-1) = CF%DOF(IXF  , 1, IZF-1) 
-                     ICFB( 2,-1) = CF%DOF(IXF+1, 1, IZF-1) 
-      
-                     ICFB(-2, 1) = CF%DOF(IXF-2, 1, IZF) 
-                     ICFB(-1, 1) = CF%DOF(IXF-1, 1, IZF) 
-                     ICFB( 1, 1) = CF%DOF(IXF  , 1, IZF) 
-                     ICFB( 2, 1) = CF%DOF(IXF+1, 1, IZF) 
-      
-                     ICFB(-2, 2) = CF%DOF(IXF-2, 1, IZF+1) 
-                     ICFB(-1, 2) = CF%DOF(IXF-1, 1, IZF+1) 
-                     ICFB( 1, 2) = CF%DOF(IXF  , 1, IZF+1) 
-                     ICFB( 2, 2) = CF%DOF(IXF+1, 1, IZF+1) 
-         
+
+                     ICC = CC%DOF(IXC, 1, IZC)
+
+                     ICFB(-2,-2) = CF%DOF(IXF-2, 1, IZF-2)
+                     ICFB(-1,-2) = CF%DOF(IXF-1, 1, IZF-2)
+                     ICFB( 1,-2) = CF%DOF(IXF  , 1, IZF-2)
+                     ICFB( 2,-2) = CF%DOF(IXF+1, 1, IZF-2)
+
+                     ICFB(-2,-1) = CF%DOF(IXF-2, 1, IZF-1)
+                     ICFB(-1,-1) = CF%DOF(IXF-1, 1, IZF-1)
+                     ICFB( 1,-1) = CF%DOF(IXF  , 1, IZF-1)
+                     ICFB( 2,-1) = CF%DOF(IXF+1, 1, IZF-1)
+
+                     ICFB(-2, 1) = CF%DOF(IXF-2, 1, IZF)
+                     ICFB(-1, 1) = CF%DOF(IXF-1, 1, IZF)
+                     ICFB( 1, 1) = CF%DOF(IXF  , 1, IZF)
+                     ICFB( 2, 1) = CF%DOF(IXF+1, 1, IZF)
+
+                     ICFB(-2, 2) = CF%DOF(IXF-2, 1, IZF+1)
+                     ICFB(-1, 2) = CF%DOF(IXF-1, 1, IZF+1)
+                     ICFB( 1, 2) = CF%DOF(IXF  , 1, IZF+1)
+                     ICFB( 2, 2) = CF%DOF(IXF+1, 1, IZF+1)
+
                      IF (IXC==1.AND.IZC==1) THEN
                         VC(ICC) = SCALR*( &
                                      W4 *VF(ICFB(-1, 2)) + W3 *VF(ICFB(1, 2)) + W1*VF(ICFB(2, 2)) + &
@@ -11835,7 +11928,7 @@ IF (BMULTILEVEL) THEN
                                      W3*VF(ICFB(-2, 1)) + W9*VF(ICFB(-1, 1)) + W12*VF(ICFB(1, 1)) +&
                                      W3*VF(ICFB(-2,-1)) + W9*VF(ICFB(-1,-1)) + W12*VF(ICFB(1,-1)) +&
                                      W1*VF(ICFB(-2,-2)) + W3*VF(ICFB(-1,-2)) + W4 *VF(ICFB(1,-2)) )
-                     ELSE 
+                     ELSE
                         VC(ICC) = SCALR*( &
                                      W1*VF(ICFB(-2,-2)) + W3*VF(ICFB(-1,-2)) + W3*VF(ICFB(1,-2)) + W1*VF(ICFB(2,-2)) +&
                                      W3*VF(ICFB(-2,-1)) + W9*VF(ICFB(-1,-1)) + W9*VF(ICFB(1,-1)) + W3*VF(ICFB(2,-1)) +&
@@ -11846,7 +11939,7 @@ IF (BMULTILEVEL) THEN
                ENDDO
 
          END SELECT SELECT_INTERPOL
-      
+
       ELSE
 
          DO IZC = 1, NZC
@@ -11859,16 +11952,16 @@ IF (BMULTILEVEL) THEN
                   IYF = 2*IYC
                   IZF = 2*IZC
 
-                  ICC = CC%DOF(IXC, IYC, IZC) 
+                  ICC = CC%DOF(IXC, IYC, IZC)
 
-                  ICF(1) = CF%DOF(IXF-1, IYF-1, IZF-1) 
-                  ICF(2) = CF%DOF(IXF-1, IYF-1, IZF  ) 
-                  ICF(3) = CF%DOF(IXF-1, IYF  , IZF-1) 
-                  ICF(4) = CF%DOF(IXF-1, IYF  , IZF  ) 
-                  ICF(5) = CF%DOF(IXF  , IYF-1, IZF-1) 
-                  ICF(6) = CF%DOF(IXF  , IYF-1, IZF  ) 
-                  ICF(7) = CF%DOF(IXF  , IYF  , IZF-1) 
-                  ICF(8) = CF%DOF(IXF  , IYF  , IZF  ) 
+                  ICF(1) = CF%DOF(IXF-1, IYF-1, IZF-1)
+                  ICF(2) = CF%DOF(IXF-1, IYF-1, IZF  )
+                  ICF(3) = CF%DOF(IXF-1, IYF  , IZF-1)
+                  ICF(4) = CF%DOF(IXF-1, IYF  , IZF  )
+                  ICF(5) = CF%DOF(IXF  , IYF-1, IZF-1)
+                  ICF(6) = CF%DOF(IXF  , IYF-1, IZF  )
+                  ICF(7) = CF%DOF(IXF  , IYF  , IZF-1)
+                  ICF(8) = CF%DOF(IXF  , IYF  , IZF  )
 
                   VC(ICC) = 0.125_EB * (  VF(ICF(1)) &
                                         + VF(ICF(2)) &
@@ -11921,7 +12014,7 @@ END SUBROUTINE SCARC_RESTRICTION
 
 
 !> ------------------------------------------------------------------------------------------------
-!> Perform prolongation from coarser to finer grid 
+!> Perform prolongation from coarser to finer grid
 !>    - 'VC' corresponds to coarser grid
 !>    - 'VF' corresponds to finer   grid
 !> ------------------------------------------------------------------------------------------------
@@ -11972,20 +12065,20 @@ IF (BMULTILEVEL) THEN
 
                   DO IZC = 1, NZC
                      DO IXC = 1, NXC
-      
+
                         IF (.NOT.PRES_ON_WHOLE_DOMAIN.AND.CC%STATE(IXC,1,IZC)/=NSCARC_DISCRET_GASPHASE) CYCLE
-      
+
                         IXF = 2*IXC
                         IYF = 1
                         IZF = 2*IZC
-      
-                        ICC = CC%DOF(IXC, 1, IZC) 
-      
-                        ICF(1) = CF%DOF(IXF-1, 1, IZF-1) 
-                        ICF(2) = CF%DOF(IXF-1, 1, IZF  ) 
-                        ICF(3) = CF%DOF(IXF  , 1, IZF-1) 
-                        ICF(4) = CF%DOF(IXF  , 1, IZF  ) 
-      
+
+                        ICC = CC%DOF(IXC, 1, IZC)
+
+                        ICF(1) = CF%DOF(IXF-1, 1, IZF-1)
+                        ICF(2) = CF%DOF(IXF-1, 1, IZF  )
+                        ICF(3) = CF%DOF(IXF  , 1, IZF-1)
+                        ICF(4) = CF%DOF(IXF  , 1, IZF  )
+
                         DO I = 1, 4
                            VF(ICF(I)) = VC(ICC)
                         ENDDO
@@ -11996,19 +12089,19 @@ IF (BMULTILEVEL) THEN
 
                   DO IZC = 1, NZC
                      DO IXC = 1, NXC
-         
+
                         IF (.NOT.PRES_ON_WHOLE_DOMAIN.AND.CC%STATE(IXC,1,IZC)/=NSCARC_DISCRET_GASPHASE) CYCLE
-         
+
                         IXF = 2*IXC
                         IZF = 2*IZC
-         
-                        ICC = CC%DOF(IXC, 1, IZC) 
-         
-                        ICFB(-1,-1) = CF%DOF(IXF-1, 1, IZF-1) 
-                        ICFB(-1, 1) = CF%DOF(IXF-1, 1, IZF  ) 
-                        ICFB( 1,-1) = CF%DOF(IXF  , 1, IZF-1) 
-                        ICFB( 1, 1) = CF%DOF(IXF  , 1, IZF  ) 
-         
+
+                        ICC = CC%DOF(IXC, 1, IZC)
+
+                        ICFB(-1,-1) = CF%DOF(IXF-1, 1, IZF-1)
+                        ICFB(-1, 1) = CF%DOF(IXF-1, 1, IZF  )
+                        ICFB( 1,-1) = CF%DOF(IXF  , 1, IZF-1)
+                        ICFB( 1, 1) = CF%DOF(IXF  , 1, IZF  )
+
                         IF (IXC==1.AND.IZC==1) THEN
                            VF(ICFB(-1,-1)) = VC(ICC)
                            VF(ICFB(-1, 1)) = SCALP*(W12*VC(ICC)+W4*VC(ICC+NXC))
@@ -12073,16 +12166,16 @@ IF (BMULTILEVEL) THEN
                      IYF = 2*IYC
                      IZF = 2*IZC
 
-                     ICC = CC%DOF(IXC, IYC, IZC) 
+                     ICC = CC%DOF(IXC, IYC, IZC)
 
-                     ICF(1) = CF%DOF(IXF-1, IYF-1, IZF-1) 
-                     ICF(2) = CF%DOF(IXF-1, IYF-1, IZF  ) 
-                     ICF(3) = CF%DOF(IXF-1, IYF  , IZF-1) 
-                     ICF(4) = CF%DOF(IXF-1, IYF  , IZF  ) 
-                     ICF(5) = CF%DOF(IXF  , IYF-1, IZF-1) 
-                     ICF(6) = CF%DOF(IXF  , IYF-1, IZF  ) 
-                     ICF(7) = CF%DOF(IXF  , IYF  , IZF-1) 
-                     ICF(8) = CF%DOF(IXF  , IYF  , IZF  ) 
+                     ICF(1) = CF%DOF(IXF-1, IYF-1, IZF-1)
+                     ICF(2) = CF%DOF(IXF-1, IYF-1, IZF  )
+                     ICF(3) = CF%DOF(IXF-1, IYF  , IZF-1)
+                     ICF(4) = CF%DOF(IXF-1, IYF  , IZF  )
+                     ICF(5) = CF%DOF(IXF  , IYF-1, IZF-1)
+                     ICF(6) = CF%DOF(IXF  , IYF-1, IZF  )
+                     ICF(7) = CF%DOF(IXF  , IYF  , IZF-1)
+                     ICF(8) = CF%DOF(IXF  , IYF  , IZF  )
 
                      DO I = 1, 8
                         VF(ICF(I)) = VC(ICC)
@@ -12635,7 +12728,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDIF
 
                LL = LL + 1
-            ENDDO 
+            ENDDO
 
             IF (RNODE/=SNODE) THEN
                N_REQ=N_REQ+1
@@ -12663,7 +12756,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDIF
 
                LL = LL + 1
-            ENDDO 
+            ENDDO
 
             IF (RNODE/=SNODE) THEN
                N_REQ=N_REQ+1
@@ -12699,7 +12792,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDIF
 
                LL = LL + 1
-            ENDDO 
+            ENDDO
 
             IF (RNODE/=SNODE) THEN
                N_REQ=N_REQ+1
@@ -12774,7 +12867,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                IX  = L%WALL(IWG)%IXG
                IY  = L%WALL(IWG)%IYG
                IZ  = L%WALL(IWG)%IZG
-            ENDDO 
+            ENDDO
 
             IF (RNODE/=SNODE) THEN
                N_REQ=N_REQ+1
@@ -12794,9 +12887,9 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             OX%SEND_REAL = 0.0_EB
 
             DO ICG=1, OL%NCG
-  
+
                WRITE(*,*) '!>!>! ACHTUNG: EXCHANGE_MATRIX_STENCIL, PACK:  nochmal checken  AMG !>!>'
- 
+
                IWG = OM%ICG_TO_IWG(ICG)
                IX  = L%WALL(IWG)%IXG
                IY  = L%WALL(IWG)%IYG
@@ -12816,7 +12909,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                   OX%SEND_REAL(LL) = REAL(NCOL)
                   LL = LL + 1
                ENDDO
-            ENDDO 
+            ENDDO
 
             IF (RNODE/=SNODE) THEN
                N_REQ=N_REQ+1
@@ -12929,7 +13022,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
             PACK_MATRIX_REST: DO ICG=1, OL%NCG
                IF (OL%WALL(IWG)%NOM/=NM) CYCLE PACK_MATRIX_REST
-               
+
                   WRITE(*,*) 'ACHTUNG: MATRIX_REST: Wegen DISCRET schauen!>'
 
                   IX = L%WALL(IWG)%IXG
@@ -13181,7 +13274,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                   NWL = OL%SUBDIVISION(2, -IOR_NBR)
 
                   UNPACK_PRESSURE: DO IW = IWL, IWL + NWL - 1
-   
+
                      ZSUM=0.0_EB
                      IWG = OM%IWL_TO_IWG(IW)
                      DO ICPL = 1, OL%NCPL
@@ -13192,9 +13285,9 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                      I=L%WALL(IWG)%IXG
                      J=L%WALL(IWG)%IYG
                      K=L%WALL(IWG)%IZG
-   
+
                      HVECTOR(I, J, K) = ZSUM/REAL(OL%NCPL,EB)
-   
+
                   ENDDO UNPACK_PRESSURE
                ENDDO
 
@@ -13213,14 +13306,14 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                   DO IW = IWL, IWL + NWL - 1
                      IWG = OM%IWL_TO_IWG(IW)
-   
+
                      ICE     = L%WALL(IWG)%ICE(1)
                      IOR_OWN = L%WALL(IWG)%IOR
 
                      VECTOR(ICE) = RECV_REAL(LL)
-   
+
                      LL = LL + 1
-                  ENDDO 
+                  ENDDO
                ENDDO
 
             !> ------------------------------------------------------------------------------------
@@ -13241,7 +13334,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                      L%MAP%ICE_TO_ICN(ICE) = RECV_INT(LL)
                      LL = LL + 1
-                  ENDDO 
+                  ENDDO
                ENDDO
 
             !> ------------------------------------------------------------------------------------
@@ -13263,7 +13356,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                      L%MAP%ICE_TO_VAL(ICE) = RECV_REAL(LL)
 
                      LL = LL + 1
-                  ENDDO 
+                  ENDDO
                ENDDO
 
 
@@ -13277,7 +13370,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                   ICW = OM%IWL_TO_ICW(IWL)
                   L%AMG%MEASURE(ICW) = L%AMG%MEASURE(ICW)  + RECV_REAL(LL)
                   LL = LL + 1
-               ENDDO 
+               ENDDO
 
             !> ------------------------------------------------------------------------------------
             !> EXCHANGE_CELL_TYPE: unpack neighboring CELL_TYPE information
@@ -13291,7 +13384,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                      OL%AMG%CTYPE(ICG) = RECV_INT(LL)
                      LL = LL+1
                   ENDDO
-               ENDDO 
+               ENDDO
 
 
             !> ------------------------------------------------------------------------------------
@@ -13305,7 +13398,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                UNPACK_MATRIX_SUBDIAG: DO IWL = 1, OL%NWL
 
                   ZSUM=0.0_EB
-                  ! ACHTUNG WEGEN NCPL SCHAUEN 
+                  ! ACHTUNG WEGEN NCPL SCHAUEN
                   IWG = OM%IWL_TO_IWG(IWL)
                   IX = L%WALL(IWG)%IXG
                   IY = L%WALL(IWG)%IYG
@@ -13482,21 +13575,21 @@ IF (.NOT.BVERBOSE_MUCH) RETURN
 
 IF (MYID == 0) THEN
    IF (N_MPI_PROCESSES == 1) THEN
-      WRITE(LU_OUTPUT,1002) 
-      WRITE(LU_OUTPUT,1001) 
-      WRITE(LU_OUTPUT,1002) 
+      WRITE(LU_OUTPUT,1002)
+      WRITE(LU_OUTPUT,1001)
+      WRITE(LU_OUTPUT,1002)
    ELSE
-      WRITE(LU_OUTPUT,2002) 
-      WRITE(LU_OUTPUT,2001) 
-      WRITE(LU_OUTPUT,2002) 
+      WRITE(LU_OUTPUT,2002)
+      WRITE(LU_OUTPUT,2001)
+      WRITE(LU_OUTPUT,2002)
    ENDIF
 ENDIF
 
 IF (MYID == 0) THEN
    IF (N_MPI_PROCESSES == 1) THEN
-      WRITE(LU_OUTPUT,1002) 
+      WRITE(LU_OUTPUT,1002)
    ELSE
-      WRITE(LU_OUTPUT,2002) 
+      WRITE(LU_OUTPUT,2002)
    ENDIF
 ENDIF
 
@@ -13531,15 +13624,15 @@ MESHES_LOOP1: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
 
    CALL SCARC_ALLOCATE_INT3(L%CELL%DOF,   0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_NONE, 'DOF')
    CALL SCARC_ALLOCATE_INT3(L%CELL%STATE, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_NONE, 'TYP')
- 
+
    L%CELL%DOF   = NSCARC_UNDEFINED_INT
    L%CELL%STATE = NSCARC_UNDEFINED_INT
-   L%CELL%STATE(1:L%NX, 1:L%NY, 1:L%NZ) = NSCARC_DISCRET_GASPHASE 
+   L%CELL%STATE(1:L%NX, 1:L%NY, 1:L%NZ) = NSCARC_DISCRET_GASPHASE
 
 ENDDO MESHES_LOOP1
 
 !>
-!> Identify and mark OBST SOLID cells in CGSC-part of DISCRET 
+!> Identify and mark OBST SOLID cells in CGSC-part of DISCRET
 !>
 MESHES_LOOP2: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
    M => MESHES(NM)
@@ -13561,7 +13654,7 @@ MESHES_LOOP3 : DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
    L => SCARC(NM)%LEVEL(NLEVEL_MIN)
 
    !> consider gasphase and solid cells
-   IF (PRES_ON_WHOLE_DOMAIN) THEN 
+   IF (PRES_ON_WHOLE_DOMAIN) THEN
       DO K=1,L%NZ
          DO J=1,L%NY
             DO I=1,L%NX
@@ -13572,7 +13665,7 @@ MESHES_LOOP3 : DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
       ENDDO
 
    !> consider only gasphase cells
-   ELSE 
+   ELSE
       DO K=1,L%NZ
          DO J=1,L%NY
             DO I=1,L%NX
@@ -13584,7 +13677,7 @@ MESHES_LOOP3 : DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
          ENDDO
       ENDDO
 
-   ENDIF 
+   ENDIF
 
    L%NCS = L%CELL%NC_LOCAL(NM)
 
@@ -13616,10 +13709,10 @@ MESHES_LOOP1: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
 
    CALL SCARC_ALLOCATE_INT3(CC%DOF,   0, LC%NX+1, 0, LC%NY+1, 0, LC%NZ+1, NSCARC_INIT_NONE, 'DOF')
    CALL SCARC_ALLOCATE_INT3(CC%STATE, 0, LC%NX+1, 0, LC%NY+1, 0, LC%NZ+1, NSCARC_INIT_NONE, 'TYP')
- 
+
    CC%DOF   = NSCARC_UNDEFINED_INT
    CC%STATE = NSCARC_UNDEFINED_INT
-   CC%STATE(1:LC%NX, 1:LC%NY, 1:LC%NZ) = NSCARC_DISCRET_GASPHASE 
+   CC%STATE(1:LC%NX, 1:LC%NY, 1:LC%NZ) = NSCARC_DISCRET_GASPHASE
 
    NSTEP = 2**(NL - NLEVEL_MIN)
 
@@ -13672,8 +13765,8 @@ SUBROUTINE SCARC_FILTER_MEANVALUE(NVECTOR, NL)
 INTEGER, INTENT(IN) :: NVECTOR, NL
 INTEGER :: NM, IC, I, J, K
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L
-TYPE (SCARC_SCOPE_TYPE), POINTER :: SC 
-REAL(EB), DIMENSION(:) , POINTER :: VC 
+TYPE (SCARC_SCOPE_TYPE), POINTER :: SC
+REAL(EB), DIMENSION(:) , POINTER :: VC
 
 
 LOCAL_REAL = 0.0_EB
@@ -13806,7 +13899,7 @@ END SUBROUTINE SCARC_RESTORE_LAST_CELL
 !
 
 !> ------------------------------------------------------------------------------------------------
-!> Set exact solution 
+!> Set exact solution
 !> ------------------------------------------------------------------------------------------------
 !DOUBLE PRECISION FUNCTION EXACT(X,Z)
 !REAL (EB), INTENT(IN) :: X, Z
@@ -13838,7 +13931,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_INT
       CASE (NSCARC_INIT_ZERO)
@@ -13863,7 +13956,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_INT
       CASE (NSCARC_INIT_ZERO)
@@ -13890,7 +13983,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2, NL3:NR3), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_INT
       CASE (NSCARC_INIT_ZERO)
@@ -13919,7 +14012,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_REAL_EB
       CASE (NSCARC_INIT_ZERO)
@@ -13947,7 +14040,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_REAL_FB
       CASE (NSCARC_INIT_ZERO)
@@ -13974,7 +14067,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_REAL_EB
       CASE (NSCARC_INIT_ZERO)
@@ -14002,7 +14095,7 @@ CHARACTER(*), INTENT(IN) :: CTEXT
 IF (.NOT.ALLOCATED(WORKSPACE)) THEN
    ALLOCATE (WORKSPACE(NL1:NR1, NL2:NR2, NL3:NR3), STAT=IERROR)
    CALL CHKMEMERR (MSG%HISTORY(MSG%NCURRENT), CTEXT, IERROR)
-   SELECT CASE (NINIT) 
+   SELECT CASE (NINIT)
       CASE (NSCARC_INIT_UNDEFINED)
          WORKSPACE = NSCARC_UNDEFINED_REAL_EB
       CASE (NSCARC_INIT_ZERO)
@@ -14022,121 +14115,186 @@ END SUBROUTINE SCARC_ALLOCATE_REAL3
 !> ------------------------------------------------------------------------------------------------
 !> Allocate matrix with corresponding pointer and length structures
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_MATRIX(MAT, NAV, NAC, NAR, NSTENCIL, NINIT, CMAT)
-TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: MAT
-INTEGER, INTENT(IN) :: NAV, NAC, NAR, NSTENCIL, NINIT
-CHARACTER(*), INTENT(IN) :: CMAT
+SUBROUTINE SCARC_ALLOCATE_MATRIX(A, CMATRIX, NC, NINIT, NL)
+TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: A
+INTEGER, INTENT(IN) :: NC, NINIT, NL
+CHARACTER(*), INTENT(IN) :: CMATRIX
 CHARACTER(40) :: CINFO
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT),'.VAL'
-CALL SCARC_ALLOCATE_REAL1(MAT%VAL, 1, NAV, NINIT, CINFO)
+SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT),'.COL'
-CALL SCARC_ALLOCATE_INT1(MAT%COL, 1, NAC, NINIT, CINFO)
+   !> CSR storage format
+   !>    - allocate arrays for matrix values, column and row pointers
+   CASE(NSCARC_STORAGE_CSR)
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT),'.ROW'
-CALL SCARC_ALLOCATE_INT1(MAT%ROW, 1, NAR, NINIT, CINFO)
+      A%CSR%NV = A%NSTENCIL * NC
+      A%CSR%NC = A%NSTENCIL * NC
+      A%CSR%NR = NC
 
-MAT%NAV = NAV
-MAT%NAC = NAC
-MAT%NAR = NAR
-MAT%NSTENCIL = NSTENCIL
+      WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.VAL'
+#ifdef WITH_MKL_FB
+      CALL SCARC_ALLOCATE_REAL1_FB(A%CSR%VAL, 1, A%CSR%NV, NINIT, CINFO)
+#else
+      CALL SCARC_ALLOCATE_REAL1(A%CSR%VAL, 1, A%CSR%NV, NINIT, CINFO)
+#endif
+
+      WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.ROW'
+      CALL SCARC_ALLOCATE_INT1(A%CSR%ROW, 1, A%CSR%NR, NINIT, CINFO)
+
+      WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.COL'
+      CALL SCARC_ALLOCATE_INT1(A%CSR%COL, 1, A%CSR%NC, NINIT, CINFO)
+
+#ifdef WITH_MKL
+      IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
+          (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
+           TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
+         WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.COL_GLOBAL'
+         CALL SCARC_ALLOCATE_INT1 (A%CSR%COL_GLOBAL, 1, A%CSR%NC, NINIT, CINFO)
+      ENDIF
+#endif
+
+   !> Banded storage format
+   !>    - allocate arrays for matrix values and offset vectors (in ascending order)
+   CASE(NSCARC_STORAGE_BANDED)
+
+      A%BANDED%NV = A%NSTENCIL * NC
+      A%BANDED%NB = A%NSTENCIL
+
+#ifdef WITH_MKL_FB
+      WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.VAL'
+      CALL SCARC_ALLOCATE_REAL1_FB(A%BANDED%VAL, 1, A%BANDED%NV, NINIT, CINFO)
+#else
+      WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.VAL'
+      CALL SCARC_ALLOCATE_REAL1(A%BANDED%VAL, 1, A%BANDED%NV, NINIT, CINFO)
+#endif
+
+      WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.OFF'
+      CALL SCARC_ALLOCATE_REAL1(A%BANDED%OFF, 1, A%BANDED%NB, NINIT, CINFO)
+
+END SELECT SELECT_STORAGE_TYPE
 
 END SUBROUTINE SCARC_ALLOCATE_MATRIX
 
-#ifdef WITH_MKL_FB
 !> ------------------------------------------------------------------------------------------------
 !> Allocate matrix with corresponding pointer and length structures
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_ALLOCATE_MATRIX_FB(MAT, NAV, NAC, NAR, NSTENCIL, NINIT, CMAT)
-TYPE (SCARC_MATRIX_FB_TYPE), INTENT(INOUT) :: MAT
-INTEGER, INTENT(IN) :: NAV, NAC, NAR, NSTENCIL, NINIT
-CHARACTER(*), INTENT(IN) :: CMAT
-CHARACTER(40) :: CINFO
+SUBROUTINE SCARC_DEALLOCATE_MATRIX(A)
+TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: A
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT),'.VAL'
-CALL SCARC_ALLOCATE_REAL1_FB(MAT%VAL, 1, NAV, NINIT, CINFO)
+A%NSTENCIL = 0
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT),'.COL'
-CALL SCARC_ALLOCATE_INT1(MAT%COL, 1, NAC, NINIT, CINFO)
+SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT),'.ROW'
-CALL SCARC_ALLOCATE_INT1(MAT%ROW, 1, NAR, NINIT, CINFO)
+   !> CSR storage format
+   CASE(NSCARC_STORAGE_CSR)
 
-MAT%NAV = NAV
-MAT%NAC = NAC
-MAT%NAR = NAR
-MAT%NSTENCIL = NSTENCIL
+      DEALLOCATE(A%CSR%VAL)
+      DEALLOCATE(A%CSR%COL)
+      DEALLOCATE(A%CSR%ROW)
 
-END SUBROUTINE SCARC_ALLOCATE_MATRIX_FB
-#endif
+      A%CSR%NV = 0
+      A%CSR%NC = 0
+      A%CSR%NR = 0
 
-!> ------------------------------------------------------------------------------------------------
-!> Allocate matrix with corresponding pointer and length structures
-!> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_DEALLOCATE_MATRIX(MAT)
-TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: MAT
+   !> BANDED storage format
+   CASE(NSCARC_STORAGE_BANDED)
 
-DEALLOCATE(MAT%VAL)
-DEALLOCATE(MAT%COL)
-DEALLOCATE(MAT%ROW)
+      DEALLOCATE(A%BANDED%VAL)
+      DEALLOCATE(A%BANDED%OFF)
 
-MAT%NAV = 0
-MAT%NAC = 0
-MAT%NAR = 0
-MAT%NSTENCIL = 0
+      A%BANDED%NV = 0
+      A%BANDED%NB = 0
+
+END SELECT SELECT_STORAGE_TYPE
 
 END SUBROUTINE SCARC_DEALLOCATE_MATRIX
 
 !> ------------------------------------------------------------------------------------------------
 !> Reduce size of matrix to specified size
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_REDUCE_MATRIX(MAT, NAV, CMAT)
-TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: MAT
-INTEGER, INTENT(IN) :: NAV
-CHARACTER(*), INTENT(IN) :: CMAT
+SUBROUTINE SCARC_RESIZE_MATRIX(A, NSIZE, CMATRIX)
+TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: A
+INTEGER, INTENT(IN) :: NSIZE
+CHARACTER(*), INTENT(IN) :: CMATRIX
 CHARACTER(40) :: CINFO
 TYPE (SCARC_MATRIX_TYPE) :: AUX
 
-IF (SIZE(MAT%VAL) == NAV) THEN
-   RETURN
-ELSE IF (SIZE(MAT%VAL) > NAV) THEN
-   WRITE(CINFO,'(A,A)') TRIM(CMAT),'.VAL'
-   CALL SCARC_COPY_MATRIX(MAT, AUX, 'AUX') 
-   CALL SCARC_DEALLOCATE_MATRIX(MAT)
-   CALL SCARC_COPY_MATRIX(AUX, MAT, 'MAT-copied')
-   CALL SCARC_DEALLOCATE_MATRIX(AUX)
-ELSE
-   CALL SCARC_SHUTDOWN('Length for resizing too big ', 'NONE', NAV)
-ENDIF
-   
-END SUBROUTINE SCARC_REDUCE_MATRIX
+SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
+
+   !> CSR storage format
+   !>    - reduce values and column pointer arrays
+   CASE(NSCARC_STORAGE_CSR)
+
+      IF (SIZE(A%CSR%VAL) == NSIZE) THEN
+         RETURN
+      ELSE IF (SIZE(A%CSR%VAL) > NSIZE) THEN
+         WRITE(CINFO,'(A,A)') TRIM(CA),'.VAL'
+         CALL SCARC_COPY_MATRIX(A, AUX, 'AUX')
+         CALL SCARC_DEALLOCATE_MATRIX(A)
+         CALL SCARC_COPY_MATRIX(AUX, A, 'A-COPY')
+         CALL SCARC_DEALLOCATE_MATRIX(AUX)
+      ELSE
+         CALL SCARC_SHUTDOWN('SCARC_RESIZE_MATRIX: New matrix length too big ', 'NONE', NSIZE)
+      ENDIF
+
+   !> Banded storage format
+   !>    - nothing to do because the whole bands have to be stored anyway
+   CASE(NSCARC_STORAGE_BANDED)
+
+      RETURN
+
+END SELECT SELECT_STORAGE_TYPE
+
+END SUBROUTINE SCARC_RESIZE_MATRIX
 
 !> ------------------------------------------------------------------------------------------------
 !> Copy matrix with all corresponding pointer and length structures
 !> If not already allocated, allocate complete matrix structure
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_COPY_MATRIX(MAT1, MAT2, CMAT2)
-TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: MAT1, MAT2
-CHARACTER(*), INTENT(IN) :: CMAT2
+SUBROUTINE SCARC_COPY_MATRIX(A1, A2, CA2)
+TYPE (SCARC_MATRIX_TYPE), INTENT(INOUT) :: A1, A2
+CHARACTER(*), INTENT(IN) :: CA2
 CHARACTER(40) :: CINFO
+TYPE
 
-MAT2%NAV = MAT1%NAV
-MAT2%NAC = MAT1%NAC
-MAT2%NAR = MAT1%NAR
-MAT2%NSTENCIL = MAT1%NSTENCIL
+A2%NSTENCIL = A1%NSTENCIL
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT2),'.VAL'
-CALL SCARC_ALLOCATE_REAL1(MAT2%VAL, 1, MAT2%NAV, NSCARC_INIT_NONE, CINFO)
-CALL SCARC_COPY_REAL(MAT1%VAL, MAT2%VAL, 1.0_EB, MAT1%NAV)
+SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT2),'.COL'
-CALL SCARC_ALLOCATE_INT1(MAT2%COL, 1, MAT2%NAC, NSCARC_INIT_NONE, CINFO)
-CALL SCARC_COPY_INT(MAT1%COL, MAT2%COL, 1, MAT1%NAC)
+   !> CSR storage format
+   CASE(NSCARC_STORAGE_CSR)
 
-WRITE(CINFO,'(A,A)') TRIM(CMAT2),'.ROW'
-CALL SCARC_ALLOCATE_INT1(MAT2%ROW, 1, MAT2%NAR, NSCARC_INIT_NONE, CINFO)
-CALL SCARC_COPY_INT(MAT1%ROW, MAT2%ROW, 1, MAT1%NAR)
+      A2%CSR%NV = A1%CSR%NV
+      A2%CSR%NC = A1%CSR%NC
+      A2%CSR%NR = A1%CSR%NR
+
+      WRITE(CINFO,'(A,A)') TRIM(CA2),'.VAL'
+      CALL SCARC_ALLOCATE_REAL1(A2%CSR%VAL, 1, A2%CSR%NV, NSCARC_INIT_NONE, CINFO)
+      CALL SCARC_COPY_REAL(A1%CSR%VAL, A2%CSR%VAL, 1.0_EB, A1%CSR%NV)
+
+      WRITE(CINFO,'(A,A)') TRIM(CA2),'.COL'
+      CALL SCARC_ALLOCATE_INT1(A2%CSR%COL, 1, A2%CSR%NC, NSCARC_INIT_NONE, CINFO)
+      CALL SCARC_COPY_INT(A1%CSR%COL, A2%CSR%COL, 1, A1%CSR%NC)
+
+      WRITE(CINFO,'(A,A)') TRIM(CA2),'.ROW'
+      CALL SCARC_ALLOCATE_INT1(A2%CSR%ROW, 1, A2%CSR%NR, NSCARC_INIT_NONE, CINFO)
+      CALL SCARC_COPY_INT(A1%CSR%ROW, A2%CSR%ROW, 1, A1%CSR%NR)
+
+   !> Banded storage format
+   CASE(NSCARC_STORAGE_BANDED)
+
+      A2%BANDED%NV = A1%BANDED%NV
+      A2%BANDED%NB = A1%BANDED%NB
+
+      WRITE(CINFO,'(A,A)') TRIM(CA2),'.VAL'
+      CALL SCARC_ALLOCATE_REAL1(A2%BANDED%VAL, 1, A2%BANDED%NV, NSCARC_INIT_NONE, CINFO)
+      CALL SCARC_COPY_REAL(A1%BANDED%VAL, A2%BANDED%VAL, 1.0_EB, A1%BANDED%NV)
+
+      WRITE(CINFO,'(A,A)') TRIM(CA2),'.OFF'
+      CALL SCARC_ALLOCATE_INT1(A2%BANDED%OFF, 1, A2%BANDED%NB, NSCARC_INIT_NONE, CINFO)
+      CALL SCARC_COPY_INT(A1%BANDED%COL, A2%BANDED%COL, 1, A1%BANDED%NB)
+
+END SELECT SELECT_STORAGE_TYPE
 
 END SUBROUTINE SCARC_COPY_MATRIX
 
