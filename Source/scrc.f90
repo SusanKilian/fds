@@ -713,8 +713,9 @@ END TYPE SCARC_STORAGE_CSR_TYPE
 !>      - the offsets from the main diagonal
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_STORAGE_BANDED_TYPE
-INTEGER  :: NV                                         !> number of matrix values
-INTEGER  :: NB                                         !> number of matrix bands
+INTEGER :: NV                                          !> number of matrix values
+INTEGER :: NS                                          !> number of symmetric matrix values
+INTEGER :: NB                                         !> number of matrix bands
 #ifdef WITH_MKL_FB
 REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL            !> values of matrix (double precision)
 #else
@@ -727,7 +728,6 @@ END TYPE SCARC_STORAGE_BANDED_TYPE
 !> Matrices including storage pointers and lengths - double precision version
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_TYPE
-INTEGER :: NAS, NAE                                    !> number of elements for different parts of structure
 INTEGER :: NSTENCIL                                    !> number of points in matrix stencil
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: STENCIL        !> matrix stencil information
 TYPE (SCARC_STORAGE_CSR_TYPE)     :: CSR
@@ -4485,12 +4485,6 @@ CALL SCARC_ENTER_ROUTINE('SCARC_SETUP_MATRIX')
 L => SCARC(NM)%LEVEL(NL)
 A => SCARC(NM)%SYSTEM(NL)%A
 
-IF (TWO_D) THEN
-   A%NSTENCIL = 5
-ELSE
-   A%NSTENCIL = 7
-ENDIF
-
 IF (NL == NLEVEL_MIN) THEN
    CELL_INDEX => MESHES(NM)%CELL_INDEX
    WALL_INDEX => MESHES(NM)%WALL_INDEX
@@ -6292,7 +6286,8 @@ INTEGER :: IW
 INTEGER :: NM, NOM
 TYPE (SCARC_LEVEL_TYPE) , POINTER :: L
 TYPE (SCARC_MATRIX_TYPE), POINTER :: A
-TYPE (SCARC_STORAGE_CSR_TYPE), POINTER :: AC, OAC
+TYPE (SCARC_STORAGE_CSR_TYPE),    POINTER :: AC, OAC
+TYPE (SCARC_STORAGE_BANDED_TYPE), POINTER :: AB, OAB
 
 CALL SCARC_ENTER_ROUTINE('SCARC_SETUP_SIZES')
 
@@ -6314,19 +6309,44 @@ SELECT CASE (NTYPE)
             A%NSTENCIL = 7
          ENDIF
 
-         AC%NV = L%NCS * A%NSTENCIL
-         AC%NC = AC%NV
-         AC%NR = L%NCS + 1
-         AC%NS = L%NCS * A%NSTENCIL
+         SELECT CASE (TYPE_STORAGE)
 
-         !> Determine sizes of overlapped parts for later communication with corresponding neighbors
-         DO IW = 1, L%NW
-            NOM = L%WALL(IW)%NOM
-            IF (NOM /= 0) THEN
-               OAC => SCARC(NM)%OSCARC(NOM)%SYSTEM(NL)%A%CSR
-               OAC%NV = OAC%NV + A%NSTENCIL
-            ENDIF
-         ENDDO
+            CASE (NSCARC_STORAGE_CSR)
+
+               AC => A%CSR
+
+               AC%NV = L%NCS * A%NSTENCIL
+               AC%NC = AC%NV
+               AC%NR = L%NCS + 1
+               AC%NS = L%NCS * A%NSTENCIL
+
+               !> Determine sizes of overlapped parts for later communication with corresponding neighbors
+               DO IW = 1, L%NW
+                  NOM = L%WALL(IW)%NOM
+                  IF (NOM /= 0) THEN
+                     OAC => SCARC(NM)%OSCARC(NOM)%SYSTEM(NL)%A%CSR
+                     OAC%NV = OAC%NV + A%NSTENCIL
+                  ENDIF
+               ENDDO
+
+            CASE (NSCARC_STORAGE_BANDED)
+
+               AB => A%BANDED
+
+               AB%NV = L%NCS * A%NSTENCIL
+               AB%NB = A%NSTENCIL
+               AB%NS = L%NCS * A%NSTENCIL
+
+               !> Determine sizes of overlapped parts for later communication with corresponding neighbors
+               DO IW = 1, L%NW
+                  NOM = L%WALL(IW)%NOM
+                  IF (NOM /= 0) THEN
+                     OAB => SCARC(NM)%OSCARC(NOM)%SYSTEM(NL)%A%BANDED
+                     OAB%NV = OAB%NV + A%NSTENCIL
+                  ENDIF
+               ENDDO
+
+         END SELECT
 
       ENDDO LEVEL_SYSTEM_MESHES_LOOP
 
@@ -6788,7 +6808,7 @@ END SUBROUTINE SCARC_VECTOR_SUM
 !> ------------------------------------------------------------------------------------------------
 !> Copy one integer array to another (possible scaled)
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_COPY_INT(X, Y, SCAL, NLEN)
+SUBROUTINE SCARC_COPY_INT(XX, YY, SCAL, NLEN)
 INTEGER,  INTENT(IN) , DIMENSION(:) :: XX
 INTEGER,  INTENT(OUT), DIMENSION(:) :: YY
 INTEGER,  INTENT(IN) :: SCAL, NLEN
@@ -6814,7 +6834,7 @@ END SUBROUTINE SCARC_COPY_INT
 !> ------------------------------------------------------------------------------------------------
 !> Copy one real array to another (possible scaled)
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_COPY_REAL(X, Y, SCAL, NLEN)
+SUBROUTINE SCARC_COPY_REAL(XX, YY, SCAL, NLEN)
 REAL(EB), INTENT(IN) , DIMENSION(:) :: XX
 REAL(EB), INTENT(OUT), DIMENSION(:) :: YY
 REAL(EB), INTENT(IN) :: SCAL
@@ -7027,7 +7047,7 @@ SELECT CASE (STACK(NSTACK-1)%SOLVER%TYPES%TYPE_RELAX)
          V2  => POINT_TO_VECTOR(NV2, NM, NL)
 
          L => SCARC(NM)%LEVEL(NL)
-         F => SCARC(NM)%FFT(NL)
+         FFT => SCARC(NM)%FFT(NL)
 
          DO K = 1, L%NZ
             DO J = 1, L%NY
@@ -10776,10 +10796,6 @@ SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
    !>    - allocate arrays for matrix values, column and row pointers
    CASE(NSCARC_STORAGE_CSR)
 
-      A%CSR%NV = A%NSTENCIL * NC
-      A%CSR%NC = A%NSTENCIL * NC
-      A%CSR%NR = NC
-
       WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.VAL'
 #ifdef WITH_MKL_FB
       CALL SCARC_ALLOCATE_REAL1_FB(A%CSR%VAL, 1, A%CSR%NV, NINIT, CINFO)
@@ -10805,9 +10821,6 @@ SELECT_STORAGE_TYPE: SELECT CASE(TYPE_STORAGE)
    !> Banded storage format
    !>    - allocate arrays for matrix values and offset vectors (in ascending order)
    CASE(NSCARC_STORAGE_BANDED)
-
-      A%BANDED%NV = A%NSTENCIL * NC
-      A%BANDED%NB = A%NSTENCIL
 
 #ifdef WITH_MKL_FB
       WRITE(CINFO,'(A,A)') TRIM(CMATRIX),'.VAL'
@@ -11088,6 +11101,7 @@ SUBROUTINE SCARC_DEBUG_QUANTITY(NTYPE, NL, CNAME0)
 INTEGER, INTENT(IN) :: NTYPE, NL
 INTEGER :: NM, NOM, IP, IC, IW, I, J, IOR0, INBR, III, JJJ, KKK, IWG
 CHARACTER (*), INTENT(IN) :: CNAME0
+CHARACTER (40) :: FORM
 TYPE (SCARC_LEVEL_TYPE)   , POINTER :: L, OL
 TYPE (SCARC_SOLVER_TYPE)  , POINTER :: SOL
 TYPE (SCARC_MATRIX_TYPE)  , POINTER :: A, AS
@@ -11530,9 +11544,10 @@ SELECT CASE (NTYPE)
              ENDDO
          WRITE(MSG%LU_DEBUG,*) 'ME%N_OBST=',ME%N_OBST
          WRITE(MSG%LU_DEBUG,*) 'ME%N_WALL_CELLS=',ME%N_WALL_CELLS
+         WRITE(FORM,'(a,i0,a)') '(', L%NX+2,'I6)'
          DO JJJ = L%NY+1,0,-1
             WRITE(MSG%LU_DEBUG,*) 'ME%CELL_INDEX(.,',JJJ,',.):'
-            WRITE(MSG%LU_DEBUG,'(13i6)') ((ME%CELL_INDEX(III,JJJ,KKK), III=0,L%NX+1,1), KKK=L%NZ+1,0,-1)
+            WRITE(MSG%LU_DEBUG,FORM) ((ME%CELL_INDEX(III,JJJ,KKK), III=0,L%NX+1,1), KKK=L%NZ+1,0,-1)
          ENDDO
          WRITE(MSG%LU_DEBUG,*) 'ME%WALL(.)%BOUNDARY_TYPE:'
          WRITE(MSG%LU_DEBUG,'(11i8)') (ME%WALL(IWG)%BOUNDARY_TYPE, IWG=1, L%NW)
@@ -11554,35 +11569,17 @@ SELECT CASE (NTYPE)
          ENDDO
          WRITE(MSG%LU_DEBUG,*) 'CELL%DOF(...)'
          DO JJJ=L%NY+1,0,-1
-            IF (L%NX==11) THEN
-               WRITE(MSG%LU_DEBUG,'(13i6)') ((L%CELL%DOF(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ELSE IF (L%NX==8) THEN
-               WRITE(MSG%LU_DEBUG,'(10i6)') ((L%CELL%DOF(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ELSE
-               WRITE(MSG%LU_DEBUG,'(6i6)') ((L%CELL%DOF(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ENDIF
+            WRITE(MSG%LU_DEBUG,FORM) ((L%CELL%DOF(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
             WRITE(MSG%LU_DEBUG,*)
          ENDDO
          WRITE(MSG%LU_DEBUG,*) 'CELL%STATE(...)'
          DO JJJ=L%NY+1,0,-1
-            IF (L%NX==11) THEN
-               WRITE(MSG%LU_DEBUG,'(13i6)') ((L%CELL%STATE(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ELSE IF (L%NX==8) THEN
-               WRITE(MSG%LU_DEBUG,'(10i6)') ((L%CELL%STATE(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ELSE
-               WRITE(MSG%LU_DEBUG,'(6i6)') ((L%CELL%STATE(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ENDIF
+            WRITE(MSG%LU_DEBUG,FORM) ((L%CELL%STATE(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
             WRITE(MSG%LU_DEBUG,*)
          ENDDO
          WRITE(MSG%LU_DEBUG,*) 'ME%CELL_INDEX:'
          DO JJJ=L%NY+1,0,-1
-            IF (L%NX==11) THEN
-               WRITE(MSG%LU_DEBUG,'(13i6)') ((ME%CELL_INDEX(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ELSE IF (L%NX==8) THEN
-               WRITE(MSG%LU_DEBUG,'(10i6)') ((ME%CELL_INDEX(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ELSE
-               WRITE(MSG%LU_DEBUG,'(6i6)') ((ME%CELL_INDEX(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
-            ENDIF
+            WRITE(MSG%LU_DEBUG,FORM) ((ME%CELL_INDEX(III,JJJ,KKK),III=0,L%NX+1),KKK=L%NZ+1,0,-1)
             WRITE(MSG%LU_DEBUG,*)
          ENDDO
       ENDDO
