@@ -1037,6 +1037,12 @@ ENDDO
 
 END SUBROUTINE SCARC_SETUP_MESSAGING
 
+!> ------------------------------------------------------------------------------------------------
+!> Shutdown ScaRC with error message
+!> ------------------------------------------------------------------------------------------------
+SUBROUTINE SCARC_MESSAGE(NMESSAGE)
+INTEGER, INTENT(IN) :: NMESSAGE
+END SUBROUTINE SCARC_MESSAGING
 
 !> ------------------------------------------------------------------------------------------------
 !> Shutdown ScaRC with error message
@@ -1082,6 +1088,8 @@ SELECT CASE (NERROR)
       CERROR = 'Matrix setup failed for level type'
    CASE (NSCARC_ERROR_MATRIX_SIZE)
       CERROR = 'Matrix resized failed due to too big new length'
+   CASE (NSCARC_ERROR_MATRIX_SUBDIAG)
+      CERROR = 'Matrix subdiag missing'
    CASE (NSCARC_ERROR_STACK_SOLVER)
       CERROR = 'Wrong number of solvers in stack'
    CASE (NSCARC_ERROR_STACK_MESSAGE)
@@ -4565,7 +4573,7 @@ IF (BINTERNAL) THEN
 #endif
       IP = IP + 1
    ELSE
-      WRITE(*,*) 'SCARC_SETUP_MATRIX_SUBDIAG: Missing! Nothing to do?'
+      CALL SCARC_SHUTDOWN(NSCARC_MATRIX_SUBDIAG, SCARC_NONE, NSCARC_NONE)
    ENDIF
 
 !> if IC is a boundary cell of the mesh, compute matrix contribution only if there is a neighbor for that cell
