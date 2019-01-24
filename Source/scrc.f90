@@ -316,9 +316,10 @@ INTEGER, PARAMETER :: NSCARC_ERROR_PARSE_INPUT       =  1, &    !> wrong input p
                       NSCARC_ERROR_NEIGHBOR_NUMBER   = 15, &    !> wrong neighbor number
                       NSCARC_ERROR_MATRIX_SETUP      = 16, &    !> error in matrix setup
                       NSCARC_ERROR_MATRIX_SIZE       = 17, &    !> error in matrix size
-                      NSCARC_ERROR_MATRIX_SYMMETRY   = 18, &    !> matrix not symmetric
-                      NSCARC_ERROR_STACK_SOLVER      = 19, &    !> error in solver stack
-                      NSCARC_ERROR_STACK_MESSAGE     = 20, &    !> error with stack message
+                      NSCARC_ERROR_MATRIX_SUBDIAG    = 18, &    !> error in matrix size
+                      NSCARC_ERROR_MATRIX_SYMMETRY   = 19, &    !> matrix not symmetric
+                      NSCARC_ERROR_STACK_SOLVER      = 20, &    !> error in solver stack
+                      NSCARC_ERROR_STACK_MESSAGE     = 21, &    !> error with stack message
                       NSCARC_ERROR_FFT_DISCRET       = 22, &    !> wrong unstructured discretization for FFT
                       NSCARC_ERROR_VECTOR_LENGTH     = 23, &    !> error in vector length
                       NSCARC_ERROR_MULTIGRID_LEVEL   = 24, &    !> wrong multigrid level
@@ -527,7 +528,7 @@ END TYPE SCARC_FACE_TYPE
 !> Wall information related to neighbors and BC's
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_WALL_TYPE
-INTEGER :: CELL_NUMBER, STATE                             !> Degree of freedom and state of related cell (gasphase/solid)
+INTEGER :: CELL_NUMBER, CELL_STATE                !> number and state of related cell (gasphase/solid)
 INTEGER :: BTYPE                                  !> type of wall cell (Dirichlet/Neumann/Internal)
 INTEGER :: BOUNDARY_TYPE = 0                      !> state of wall cell (Solid/Interpolated/Open))
 INTEGER :: IOR = 0                                !> orientation of wall cell
@@ -1042,7 +1043,7 @@ END SUBROUTINE SCARC_SETUP_MESSAGING
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_MESSAGE(NMESSAGE)
 INTEGER, INTENT(IN) :: NMESSAGE
-END SUBROUTINE SCARC_MESSAGING
+END SUBROUTINE SCARC_MESSAGE
 
 !> ------------------------------------------------------------------------------------------------
 !> Shutdown ScaRC with error message
@@ -7860,7 +7861,7 @@ BICG_LOOP: DO ITE = 1, NIT
    WRITE(MSG%LU_VERBOSE,1000) 'BICG-Iteration','ITE',ITE,'Residual=',RES
 #endif
 
-   NSTATE = SCARC_CONVERGENCE_CELL_STATE(0, NL)                            !> RES < TOL ???
+   NSTATE = SCARC_CONVERGENCE_STATE(0, NL)                            !> RES < TOL ???
    IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT BICG_LOOP
 
 ENDDO BICG_LOOP
@@ -8100,7 +8101,7 @@ MULTIGRID_LOOP: DO ITE = 1, NIT
    WRITE(MSG%LU_VERBOSE,1000) 'SCARC_MG-Iteration','ITE',ITE,'Residual=',RES
 #endif
 
-   NSTATE = SCARC_CONVERGENCE_CELL_STATE(0, NL)                                    !> convergence ?
+   NSTATE = SCARC_CONVERGENCE_STATE(0, NL)                                    !> convergence ?
    IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT MULTIGRID_LOOP
 
 ENDDO MULTIGRID_LOOP
@@ -8285,7 +8286,7 @@ SMOOTH_LOOP: DO ITE=1, NIT
 
    IF (BL2NORM.OR.ITE==NIT) THEN
       RES = SCARC_L2NORM (V, NL)                                        !>  RES := ||V||
-      NSTATE = SCARC_CONVERGENCE_CELL_STATE(NTYPE, NL)
+      NSTATE = SCARC_CONVERGENCE_STATE(NTYPE, NL)
       IF (NSTATE /= NSCARC_STATE_PROCEED) EXIT SMOOTH_LOOP              !>  RES < TOL ?
    ENDIF
 
@@ -8619,7 +8620,7 @@ END SUBROUTINE SCARC_SETUP_WORKSPACE
 !> ------------------------------------------------------------------------------------------------
 !> Check if solver converges or diverges and print out residual information
 !> ------------------------------------------------------------------------------------------------
-INTEGER FUNCTION SCARC_CONVERGENCE_CELL_STATE(ISM, NL)
+INTEGER FUNCTION SCARC_CONVERGENCE_STATE(ISM, NL)
 INTEGER, INTENT(IN) :: NL, ISM
 INTEGER :: NSTATE
 
@@ -9712,8 +9713,8 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                IPTR=1
                DO ICG = 1, OL%NCG
 
-                  OL%WALL(ICG)%CELL_STATE = RECV_INT(IPTR  )
-                  OL%WALL(ICG)%CELL_NUMBER   = RECV_INT(IPTR+1)
+                  OL%WALL(ICG)%CELL_STATE  = RECV_INT(IPTR  )
+                  OL%WALL(ICG)%CELL_NUMBER = RECV_INT(IPTR+1)
                   IPTR = IPTR + 2
 
                   IWG = OL%MAP%ICG_TO_IWG(ICG)
