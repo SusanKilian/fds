@@ -1712,6 +1712,7 @@ TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 
 LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
+   M => POINT_TO_MESH(NM)
    S => POINT_TO_SCARC(NM)
 
    !> store bounds of mesh in SCARC-structure
@@ -1879,7 +1880,7 @@ END SUBROUTINE SCARC_SETUP_MESHES
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_INTERFACES
 INTEGER :: NM, NOM, NL
-TYPE (MESH_TYPE), POINTER :: M=>NULL()
+TYPE (MESH_TYPE), POINTER :: M=>NULL(), OM=>NULL()
 TYPE (SCARC_NEIGHBOR_TYPE), POINTER :: OS=>NULL()
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL(), OLF=>NULL(), OLC=>NULL()
 
@@ -1891,6 +1892,7 @@ N_EXCHANGE =  0
 !> Allocate basic WALL and FACE types on mesh NM for all requested grid levels
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
+   M => POINT_TO_MESH(NM)
    L => POINT_TO_LEVEL(NM, NLEVEL_MIN)    !> point to finest level
 
    ALLOCATE(L%WALL(L%NW), STAT=IERROR)
@@ -1931,14 +1933,15 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       ALLOCATE (OS%LEVEL(NLEVEL_MIN:NLEVEL_MAX), STAT=IERROR)
       CALL CHKMEMERR ('SCARC_SETUP_INTERFACES', 'OS%LEVEL', IERROR)
 
+      OM  => POINT_TO_MESH(NOM)
       OLF => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL)
 
-      OLF%NX = MESHES(NOM)%IBAR                                    !> number of cells in x-direction on other mesh
-      OLF%NY = MESHES(NOM)%JBAR                                    !> number of cells in y-direction on other mesh
-      OLF%NZ = MESHES(NOM)%KBAR                                    !> number of cells in z-direction on other mesh
+      OLF%NX = OM%IBAR                                    !> number of cells in x-direction on other mesh
+      OLF%NY = OM%JBAR                                    !> number of cells in y-direction on other mesh
+      OLF%NZ = OM%KBAR                                    !> number of cells in z-direction on other mesh
 
-      OLF%N_WALL_CELLS_EXT = MESHES(NOM)%N_EXTERNAL_WALL_CELLS     !> number of external wall cells on other mesh
-      OLF%N_WALL_CELLS_INT = MESHES(NOM)%N_INTERNAL_WALL_CELLS     !> number of external wall cells on other mesh
+      OLF%N_WALL_CELLS_EXT = OM%N_EXTERNAL_WALL_CELLS     !> number of external wall cells on other mesh
+      OLF%N_WALL_CELLS_INT = OM%N_INTERNAL_WALL_CELLS     !> number of external wall cells on other mesh
 
       OLF%NC  = OLF%NX*OLF%NY*OLF%NZ                               !> number of cells on other mesh
       OLF%NW  = OLF%N_WALL_CELLS_EXT + OLF%N_WALL_CELLS_INT        !> number of walls cell on other mesh
@@ -2549,6 +2552,7 @@ TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_OBST_TYPE), POINTER :: OB=>NULL()
 
 WRITE(*,*) 'TOFIX: Check NL level'
+M => POINT_TO_MESH(NM)
 L => POINT_TO_LEVEL(NM, NL)
 
 IF (NL == NLEVEL_MIN) THEN
@@ -2645,6 +2649,7 @@ TYPE(MESH_TYPE), POINTER :: M=>NULL()
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 
 WRITE(*,*) 'TOFIX: Check NL level'
+M => POINT_TO_MESH(NM)
 L => POINT_TO_LEVEL(NM, NL)
 
 IF (NL == NLEVEL_MIN) THEN
@@ -4453,18 +4458,13 @@ END FUNCTION VALID_SUBDIAG
 SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_CSR (IC, IX, IY, IZ, IP, NM, NL)
 INTEGER, INTENT(IN) :: IC, IX, IY, IZ, NM, NL
 INTEGER, INTENT(INOUT) :: IP
-REAL(EB) :: VAL
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_MATRIX_CSR_TYPE), POINTER :: AC=>NULL()
 
 L => POINT_TO_LEVEL(NM, NL)
 AC => POINT_TO_MATRIX_CSR(NM, NL)
 
-VAL = 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
-IF (.NOT.TWO_D) VAL = VAL - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
-VAL = VAL - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
-
-AC%VAL(IP) = AC%VAL(IP) - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
+AC%VAL(IP) = - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
 IF (.NOT.TWO_D) AC%VAL(IP) = AC%VAL(IP) - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
 AC%VAL(IP) = AC%VAL(IP) - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
 
@@ -5716,7 +5716,8 @@ TYPE(SCARC_FFT_TYPE), POINTER :: FFT=>NULL()
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    LEVEL_LOOP: DO NL = NLMIN, NLMAX
-
+                                 
+      M => POINT_TO_MESH(NM)
       S   => POINT_TO_SCARC(NM)
       L   => POINT_TO_LEVEL(NM, NL)
       FFT => POINT_TO_FFT(NM, NL)
@@ -6275,7 +6276,8 @@ SELECT CASE (TYPE_MATRIX)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-         L => POINT_TO_LEVEL (NM, NL)
+         L => POINT_TO_LEVEL (NM, NL)                  
+         AC => POINT_TO_MATRIX_CSR (NM, NL)
 
          V1 => POINT_TO_VECTOR (NM, NL, NVEC1)
          V2 => POINT_TO_VECTOR (NM, NL, NVEC2)
@@ -8199,8 +8201,6 @@ IF (NPARENT > 0) THEN
    Z = SOLP%Z
    E = SOLP%E
 
-ELSE
-   CALL SCARC_SHUTDOWN(NSCARC_ERROR_STACK_SOLVER, SCARC_NONE, NPARENT)
 ENDIF
 
 END SUBROUTINE SCARC_RELEASE_SOLVER
@@ -8904,7 +8904,6 @@ INTEGER, INTENT(IN) :: NL
 INTEGER :: NM, I, J, K, IC
 REAL(EB), POINTER, DIMENSION(:,:,:) :: HP
 TYPE (MESH_TYPE), POINTER :: M=>NULL()
-TYPE (SCARC_TYPE), POINTER :: S=>NULL()
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE (SCARC_SCOPE_TYPE), POINTER :: SCO=>NULL()
 
@@ -8920,9 +8919,9 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       HP => M%HS
    ENDIF
 
-   DO K = 1, S%KBAR
-      DO J = 1, S%JBAR
-         DO I = 1, S%IBAR
+   DO K = 1, M%KBAR
+      DO J = 1, M%JBAR
+         DO I = 1, M%IBAR
             IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
             IC = L%CELL_NUMBER(I,J,K)
             HP(I, J, K) = SCO%X(IC)
@@ -9775,6 +9774,7 @@ ENDDO MESHES_LOOP1
 !> Identify and mark OBST SOLID cells in CGSC-part of DISCRET
 !>
 MESHES_LOOP2: DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+   M => POINT_TO_MESH(NM)
    S => POINT_TO_SCARC(NM)
    L => POINT_TO_LEVEL(NM, NLEVEL_MIN)
    DO K = 1, L%NZ
@@ -10718,7 +10718,7 @@ DO NM = 1, NMESHES
 
 ENDDO
 
-CALL SCARC_MATLAB_VECTOR(NVEC, CVEC, NL)
+!CALL SCARC_MATLAB_VECTOR(NVEC, CVEC, NL)
 
 !2000 FORMAT('=== ',A,' : ',A,' on mesh ',I8,' on level ',I8, ': NX, NY, NZ=',3I8,': NVEC=',I8)
 2001 FORMAT('=== ',A,' on mesh ',I8,' on level ',I8)
@@ -10792,6 +10792,7 @@ SELECT CASE (NTYPE)
 
             DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                L => POINT_TO_LEVEL(NM, NL)
+               AC => POINT_TO_MATRIX_CSR(NM, NL)
                WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
                WRITE(MSG%LU_DEBUG,*) '----------- SHOWING FULL MATRIX ENTRIES'
                WRITE(MSG%LU_DEBUG,*) 'NCS =',L%NCS
@@ -10838,7 +10839,7 @@ SELECT CASE (NTYPE)
 
             !CALL SCARC_PRINT_MATRIX (L%A, AC%ROW, AC%COL, L%NCS, L%NCS, NM, NL, 'A')
             !CALL SCARC_PRINT_MATRIX2(L%A, AC%ROW, AC%COL, L%NCS, L%NCS, L%NX, L%NY, L%NZ, NM, NL, 'A')
-            CALL SCARC_MATLAB_MATRIX(AC%VAL, AC%ROW, AC%COL, L%NCS, L%NCS, NM, NL, 'A')
+            !CALL SCARC_MATLAB_MATRIX(AC%VAL, AC%ROW, AC%COL, L%NCS, L%NCS, NM, NL, 'A')
 
          CASE (NSCARC_MATRIX_BANDED)
             WRITE(*,*) 'SCARC_DEBUG_QUANTITY, DEBUG_MATRIX: TO FIX'
@@ -10857,6 +10858,7 @@ SELECT CASE (NTYPE)
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
          L => POINT_TO_LEVEL(NM, NL)
+         AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
          WRITE(MSG%LU_DEBUG,*) '----------- SHOWING SYMMETRIC MATRIX ENTRIES'
          WRITE(MSG%LU_DEBUG,*) 'L%NCS=', L%NCS
          WRITE(MSG%LU_DEBUG,*) 'AC_SYM%ROW(L%NCS)=', AC_SYM%ROW(L%NCS)
@@ -10894,30 +10896,6 @@ SELECT CASE (NTYPE)
          !CALL SCARC_MATLAB_MATRIX(AS%VAL, AS%ROW, AS%COL, L%NC, L%NC, NM, NL, 'AS')
       ENDDO
 #endif
-
-   !> ------------------------------------------------------------------------------------------------
-   !> Debug extended system matrix A (corresponding to system type)
-   !> ------------------------------------------------------------------------------------------------
-   CASE (NSCARC_DEBUG_MATRIXE)
-
-      DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
-         WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
-         L => POINT_TO_LEVEL(NM, NL)
-         WRITE(MSG%LU_DEBUG,*) 'PRINTING EXTENDED MATRIX, NCE=',L%NC
-         WRITE(MSG%LU_DEBUG,*) '---------------------- AC%ROW:', L%NC
-         WRITE(MSG%LU_DEBUG,'(4i9)') (AC%ROW(IC), IC=1,L%NC+1)
-         WRITE(MSG%LU_DEBUG,*) '---------------------- AC%COL:'
-         DO IC = 1, L%NC
-            WRITE(MSG%LU_DEBUG,'(i5,a,20i9)') IC,':',(AC%COL(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
-         ENDDO
-         WRITE(MSG%LU_DEBUG,*) '---------------------- A:'
-         DO IC = 1, L%NC
-            WRITE(MSG%LU_DEBUG,'(i5,a,20f9.2)') IC,':',(AC%VAL(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
-         ENDDO
-         WRITE(MSG%LU_DEBUG,*) 'SIZE(AC%VAL) =',SIZE(AC%VAL)
-         WRITE(MSG%LU_DEBUG,*) 'SIZE(AC%COL) =',SIZE(AC%COL)
-         WRITE(MSG%LU_DEBUG,*) 'SIZE(AC%ROW) =',SIZE(AC%ROW)
-      ENDDO
 
  !> ------------------------------------------------------------------------------------------------
  !> Debug FACEINFO
@@ -11006,6 +10984,7 @@ SELECT CASE (NTYPE)
    CASE (NSCARC_DEBUG_WALLINFO)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+         M => POINT_TO_MESH(NM)
          L => POINT_TO_LEVEL(NM, NL)
          WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
          WRITE(MSG%LU_DEBUG,*) 'SIZE(L%MAP%ICE_TO_IWG)=',SIZE(L%MAP%ICE_TO_IWG)
@@ -11146,6 +11125,7 @@ SELECT CASE (NTYPE)
  !> ------------------------------------------------------------------------------------------------
    CASE (NSCARC_DEBUG_DISCRETIZATION)
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+         M => POINT_TO_MESH(NM)
          L => POINT_TO_LEVEL(NM, NL)
          WRITE(MSG%LU_DEBUG,*) 'M%N_OBST=',M%N_OBST
          WRITE(MSG%LU_DEBUG,*) 'M%OBST ... I1, I2, J1, J2, K1, K2'

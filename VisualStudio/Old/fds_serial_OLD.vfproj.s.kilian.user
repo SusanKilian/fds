@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioUserFile ProjectCreator="Intel Fortran" Keyword="Application" Version="11.0" ProjectIdGuid="{8E0DE24F-626B-4941-BDC0-1F6C571612B5}">
+	<Configurations>
+		<Configuration Name="Debug|Win32"/>
+		<Configuration Name="Release|Win32"/>
+		<Configuration Name="Debug|x64" CommandArguments="test1.fds" WorkingDirectory="C:\hhpberlin\Daten\GIT\B_Firemodels\01_fds\Verification\Pressure_Solver"/>
+		<Configuration Name="Release|x64" CommandArguments="test1.fds" WorkingDirectory="&quot;C:\hhpberlin\Daten\GIT\B_Firemodels\01_fds\Verification\Pressure_Solver&quot;"/></Configurations></VisualStudioUserFile>
