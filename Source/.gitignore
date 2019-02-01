@@ -1,3 +1,16 @@
 .*.swp
 scrc_*.f90
+*.binfo
+*.out
+*.debug???
+*.log???
+*.sf
+*.q
+*.s3d
+*.s3d.sz
+*.bf
+*.txt
+*.smv
+*.csv
+Cases
 ?????*.f90
