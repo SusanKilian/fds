@@ -898,7 +898,7 @@ CALL SCARC_SETUP_TIMING                                                    !> ti
 CALL SCARC_PARSE_INPUT          ; IF (STOP_STATUS==SETUP_STOP) RETURN
 
 !>
-!> Setup all needed ScaRC structures based on read input data
+!> Setup all needed ScaRC structures based on input data from READ_PRES
 !>
 CALL SCARC_SETUP_LEVELS                                                   !> different grid levels
 CALL SCARC_SETUP_LOGICALS       
@@ -910,15 +910,18 @@ CALL SCARC_SETUP_GLOBALS        ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> glo
 CALL SCARC_SETUP_WALLS          ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> information along neighboring walls
 CALL SCARC_SETUP_EXCHANGE       ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> information for data exchange
 CALL SCARC_SETUP_SYSTEM         ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> linear system of equations
+WRITE(*,*) 'AFTER SYSTEM'
 CALL SCARC_SETUP_METHODS        ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> types and parameters for all needed solvers
+WRITE(*,*) 'AFTER METHODS'
 CALL SCARC_SETUP_VECTORS        ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> vectors for all needed solvers
+WRITE(*,*) 'AFTER VECTORS'
 
 TSETUP(MYID+1)%OVERALL = TSETUP(MYID+1)%OVERALL + CURRENT_TIME() - TNOW
 END SUBROUTINE SCARC_SETUP
 
 
 !> ------------------------------------------------------------------------------------------------
-!> Setup debug file if requested
+!> Setup time measurements
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_TIMING
 
@@ -4359,7 +4362,7 @@ SELECT_STORAGE_TYPE: SELECT CASE (TYPE_MATRIX)
       AC%NAS        = IP-1
       CALL SCARC_RESIZE_MATRIX_CSR(AC, AC%NA, 'Resized System-Matrix')
 
-      WRITE(*,*) 'TO FIX: COLG must also be reduced!!'
+      WRITE(*,*) 'TOFIX: COLG must also be reduced!!'
 
    !> 
    !> ---------- BANDED Storage technique
@@ -4751,9 +4754,9 @@ AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
 CALL SCARC_ALLOCATE_MATRIX_CSR(AC_SYM, 'AC_SYM', NL, NSCARC_INIT_ZERO)
 
 #ifdef WITH_MKL_FB
-WRITE(*,*) 'TO FIX FB!'
+WRITE(*,*) 'TOFIX FB!'
 #else
-WRITE(*,*) 'TO FIX!'
+WRITE(*,*) 'TOFIX!'
 #endif
 
 IF ((TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
@@ -4862,7 +4865,7 @@ TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_MATRIX_CSR_TYPE), POINTER :: AC=>NULL()
 
 IF (TYPE_MATRIX == NSCARC_MATRIX_BANDED) THEN
-   WRITE(*,*) 'TO FIX!'
+   WRITE(*,*) 'TOFIX!'
    RETURN
 ENDIF
 
@@ -6195,6 +6198,7 @@ REAL (EB) :: TNOW
 TNOW = CURRENT_TIME()
 
 ITE_PRES = ITE_PRES + 1
+WRITE(*,*) 'IN SOLVER'
 
 SELECT_METHOD: SELECT CASE (TYPE_METHOD)
 
@@ -6203,6 +6207,7 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
 
       SELECT_KRYLOV: SELECT CASE (TYPE_KRYLOV)
          CASE (NSCARC_KRYLOV_CG)
+WRITE(*,*) 'CALLING CG '
             CALL SCARC_METHOD_CG  (NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_KRYLOV_CGBARO)
             CALL SCARC_METHOD_CGBARO (NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
@@ -6298,7 +6303,7 @@ SELECT CASE (TYPE_MATRIX)
          ENDDO
       ENDDO
    CASE (NSCARC_MATRIX_BANDED)
-      WRITE(*,*) 'SCARC_MATVEC_PRODUCT: TO FIX BANDED VERSION'
+      WRITE(*,*) 'SCARC_MATVEC_PRODUCT: TOFIX BANDED VERSION'
 
 END SELECT
 
@@ -6952,17 +6957,15 @@ END SUBROUTINE SCARC_INCREASE_ITERATION_COUNTS
 !> ------------------------------------------------------------------------------------------------
 !> Perform global CG-method based on global possion-matrix
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_CG(NSTACK, NPARENT, NLEVEL)
-INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
-INTEGER   :: NSTATE, NS, NL, NP
+SUBROUTINE SCARC_METHOD_CG(NS, NP, NL)
+INTEGER, INTENT(IN) :: NS, NP, NL           !> current and parent stack position, and current level
+INTEGER   :: NSTATE
 REAL (EB) :: SIGMA0, SIGMA1, ALPHA0, GAMMA0
 REAL (EB) :: TNOW
 
 TNOW = CURRENT_TIME()
 
-NS = NSTACK
-NL = NLEVEL
-NP = NPARENT
+WRITE(*,*) 'CG1'
 
 !> ------------------------------------------------------------------------------------------------
 !> Initialization:
@@ -6988,6 +6991,7 @@ CALL SCARC_DEBUG_LEVEL (X, 'X INIT1', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'B INIT1', NL)
 #endif
 
+WRITE(*,*) 'CG2'
 !> ------------------------------------------------------------------------------------------------
 !> Compute initial residual and perform initial preconditioning
 !> ------------------------------------------------------------------------------------------------
@@ -7014,6 +7018,7 @@ ELSE
    NIT=0                                                     !>  if already convergence, don't iterate
 ENDIF
 
+WRITE(*,*) 'CG3'
 !> ------------------------------------------------------------------------------------------------
 !> Perform conjugate gradient looping
 !> ------------------------------------------------------------------------------------------------
@@ -7034,6 +7039,7 @@ CG_LOOP: DO ITE = 1, NIT
    CALL SCARC_VECTOR_SUM (V, X, ALPHA0, 1.0_EB, NL)          !>  X := ALPHA0*D + X
    CALL SCARC_VECTOR_SUM (Y, W, ALPHA0, 1.0_EB, NL)          !>  W := ALPHA0*Y + W
 
+WRITE(*,*) 'CG4'
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_LEVEL (X, 'X ITE2', NL)
    CALL SCARC_DEBUG_LEVEL (W, 'W ITE2', NL)
@@ -7055,6 +7061,7 @@ CG_LOOP: DO ITE = 1, NIT
    SIGMA1 = SCARC_SCALAR_PRODUCT (W, Q, NL)                  !>  SIGMA1 := (W,Q)
    GAMMA0 = SIGMA1/SIGMA0
    SIGMA0 = SIGMA1
+WRITE(*,*) 'CG5'
 
    CALL SCARC_VECTOR_SUM (Q, V, -1.0_EB, GAMMA0, NL)         !>  V := -Q + GAMMA0*V
 
@@ -7084,12 +7091,14 @@ IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
    CALL SCARC_FILTER_MEANVALUE(X, NL)
 ENDIF
 
+WRITE(*,*) 'CG6'
 IF (TYPE_SCOPE == NSCARC_SOLVER_MAIN) THEN
    CALL SCARC_UPDATE_PRESSURE_MAINCELLS  (NLEVEL_MIN)
    CALL SCARC_UPDATE_PRESSURE_GHOSTCELLS (NLEVEL_MIN)
 ENDIF
 
 CALL SCARC_RELEASE_SOLVER(NS, NP)
+WRITE(*,*) 'CG7'
 
 TSTEP(MYID+1)%KRYLOV=MAX(TSTEP(MYID+1)%KRYLOV,CURRENT_TIME()-TNOW)
 TSUM(MYID+1)%KRYLOV =TSUM(MYID+1)%KRYLOV+CURRENT_TIME()-TNOW
@@ -10842,7 +10851,7 @@ SELECT CASE (NTYPE)
             !CALL SCARC_MATLAB_MATRIX(AC%VAL, AC%ROW, AC%COL, L%NCS, L%NCS, NM, NL, 'A')
 
          CASE (NSCARC_MATRIX_BANDED)
-            WRITE(*,*) 'SCARC_DEBUG_QUANTITY, DEBUG_MATRIX: TO FIX'
+            WRITE(*,*) 'SCARC_DEBUG_QUANTITY, DEBUG_MATRIX: TOFIX'
 
       END SELECT
 
