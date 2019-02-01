@@ -5,6 +5,7 @@
 .*.swp
 .*.swo
 tt
+VisualStudio/Cases
 
 # compiler output files
 *.exe
@@ -43,6 +44,8 @@ Manuals/*/*Guide.pdf
 
 # FDS output files
 *.sf
+*.debug*
+*.log*
 *.bf
 *.s3d
 *.q
