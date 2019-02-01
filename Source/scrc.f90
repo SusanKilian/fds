@@ -591,7 +591,6 @@ END TYPE SCARC_CONDENSED_TYPE
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_CSR_TYPE
 INTEGER  :: NSTENCIL                                    !> number of points in matrix stencil
-REAL(EB) :: STENCIL(-3:3)                               !> matrix stencil (for a cell in the middle and on all faces)
 INTEGER  :: POS(-3:3)                                   !> Position of IOR's in STENCIL
 INTEGER  :: NA, NAS                                     !> number of matrix values in general and symmetric case
 INTEGER  :: NC, NCS                                     !> number of matrix columns in general and symmetric case
@@ -599,8 +598,10 @@ INTEGER  :: NR                                          !> number of matrix rows
 INTEGER  :: NSTORE = 0
 #ifdef WITH_MKL_FB
 REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB         !> values of matrix (single precision)
+REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_FB         !> matrix stencil (for a cell in the middle and on all faces)
 #else
 REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL            !> values of matrix (real precision)
+REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_EB         !> matrix stencil (for a cell in the middle and on all faces)
 #endif
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW            !> row pointer
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL            !> column pointers
@@ -618,16 +619,17 @@ END TYPE SCARC_MATRIX_CSR_TYPE
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_BANDED_TYPE
 INTEGER  :: NSTENCIL                                    !> number of points in matrix stencil
-REAL(EB) :: STENCIL(-3:3)                               !> matrix stencil (for a cell in the middle and on all faces)
 INTEGER  :: POS(-3:3)                                   !> position of IOR's in STENCIL and in matrix storage array
 INTEGER  :: NA, NAS                                     !> number of matrix values in general and symmetric cass
 INTEGER  :: NDIAG, NLEN                                 !> length of main diagonal
 #ifdef WITH_MKL_FB
-REAL(FB), ALLOCATABLE, DIMENSION (:,:) :: VAL_FB       !> values of matrix (double precision)
+REAL(FB), ALLOCATABLE, DIMENSION (:,:) :: VAL_FB        !> values of matrix (double precision)
+REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_FB         !> matrix stencil (for a cell in the middle and on all faces)
 #else
-REAL(EB), ALLOCATABLE, DIMENSION (:,:) :: VAL          !> values of matrix (single precision)
+REAL(EB), ALLOCATABLE, DIMENSION (:,:) :: VAL           !> values of matrix (single precision)
+REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_EB         !> matrix stencil (for a cell in the middle and on all faces)
 #endif
-INTEGER,  ALLOCATABLE, DIMENSION (:) :: OFFSET         !> offset pointers
+INTEGER,  ALLOCATABLE, DIMENSION (:) :: OFFSET          !> offset pointers
 END TYPE SCARC_MATRIX_BANDED_TYPE
 
 !> --------------------------------------------------------------------------------------------
