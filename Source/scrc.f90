@@ -591,7 +591,7 @@ END TYPE SCARC_CONDENSED_TYPE
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_CSR_TYPE
 INTEGER  :: NSTENCIL                                    !> number of points in matrix stencil
-REAL(EB)  :: STENCIL(-3:3)                               !> matrix stencil (for a cell in the middle and on all faces)
+REAL(EB) :: STENCIL(-3:3)                               !> matrix stencil (for a cell in the middle and on all faces)
 INTEGER  :: POS(-3:3)                                   !> Position of IOR's in STENCIL
 INTEGER  :: NA, NAS                                     !> number of matrix values in general and symmetric case
 INTEGER  :: NC, NCS                                     !> number of matrix columns in general and symmetric case
@@ -4564,6 +4564,9 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
 
 ENDIF
 
+WRITE(*,*) 'AC%STENCIL=',AC%STENCIL
+WRITE(*,*) 'AC%POS(',IOR0,')=',AC%POS(IOR0)
+WRITE(*,*) 'AC%STENCIL(',AC%POS(IOR0),')=',AC%VAL(IP)
 AC%STENCIL(AC%POS(IOR0)) = AC%VAL(IP)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG_CSR
@@ -6059,7 +6062,7 @@ SELECT CASE (NTYPE)
 
                IF (TWO_D) THEN
                   AC%NSTENCIL = 5
-                  AC%POS(-3:3) = (/1,2,0,3,0,4,5/)     !> assignment of IOR settings to position in stencil
+                  AC%POS(-3:3) = (/1,0,2,3,4,0,5/)     !> assignment of IOR settings to position in stencil
                ELSE
                   AC%NSTENCIL = 7
                   AC%POS(-3:3) = (/1,2,3,4,5,6,7/)
@@ -6085,7 +6088,7 @@ SELECT CASE (NTYPE)
 
                IF (TWO_D) THEN
                   AB%NSTENCIL = 5                      !> 5-point Laplacian
-                  AB%POS(-3:3) = (/1,2,0,3,0,4,5/)     !> assignment of IOR settings to columns in matrix array
+                  AB%POS(-3:3) = (/1,0,2,3,4,0,5/)     !> assignment of IOR settings to columns in matrix array
                   AB%OFFSET(1) = -L%NX
                   AB%OFFSET(2) = -1
                   AB%OFFSET(3) =  0
