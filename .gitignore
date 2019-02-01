@@ -5,6 +5,10 @@
 .*.swp
 .*.swo
 tt
+<<<<<<< HEAD
+VisualStudio/fds_serial
+=======
+>>>>>>> c59bf5567e4c414f92000461c22b6a9b63cbf22d
 VisualStudio/Cases
 
 # compiler output files

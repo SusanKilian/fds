@@ -598,10 +598,10 @@ INTEGER  :: NR                                          !> number of matrix rows
 INTEGER  :: NSTORE = 0
 #ifdef WITH_MKL_FB
 REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB         !> values of matrix (single precision)
-REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_FB         !> matrix stencil (for a cell in the middle and on all faces)
+REAL(FB), ALLOCATABLE, DIMENSION (:) :: STENCIL_FB     !> store basic stencil information in single precision
 #else
 REAL(EB), ALLOCATABLE, DIMENSION (:) :: VAL            !> values of matrix (real precision)
-REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_EB         !> matrix stencil (for a cell in the middle and on all faces)
+REAL(EB), ALLOCATABLE, DIMENSION (:) :: STENCIL        !> store basic stencil information in single precision
 #endif
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: ROW            !> row pointer
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: COL            !> column pointers
@@ -624,10 +624,10 @@ INTEGER  :: NA, NAS                                     !> number of matrix valu
 INTEGER  :: NDIAG, NLEN                                 !> length of main diagonal
 #ifdef WITH_MKL_FB
 REAL(FB), ALLOCATABLE, DIMENSION (:,:) :: VAL_FB        !> values of matrix (double precision)
-REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_FB         !> matrix stencil (for a cell in the middle and on all faces)
+REAL(FB), ALLOCATABLE, DIMENSION (:)   :: STENCIL_FB    !> store basic stencil information in single precision
 #else
 REAL(EB), ALLOCATABLE, DIMENSION (:,:) :: VAL           !> values of matrix (single precision)
-REAL(EB) :: STENCIL(-3:3) = NSCARC_ZERO_REAL_EB         !> matrix stencil (for a cell in the middle and on all faces)
+REAL(EB), ALLOCATABLE, DIMENSION (:)   :: STENCIL       !> store basic stencil information in double precision
 #endif
 INTEGER,  ALLOCATABLE, DIMENSION (:) :: OFFSET          !> offset pointers
 END TYPE SCARC_MATRIX_BANDED_TYPE
@@ -4373,6 +4373,22 @@ SELECT_STORAGE_TYPE: SELECT CASE (TYPE_MATRIX)
       AB => POINT_TO_MATRIX_BANDED(NM, NL)
       CALL SCARC_ALLOCATE_MATRIX_BANDED(AB, 'AB', NL, NSCARC_INIT_ZERO)
 
+      IF (TWO_D) THEN
+         AB%OFFSET(1) = -L%NX
+         AB%OFFSET(2) = -1
+         AB%OFFSET(3) =  0
+         AB%OFFSET(4) =  1 
+         AB%OFFSET(5) =  L%NX
+      ELSE
+         AB%OFFSET(1) = -L%NX*L%NY
+         AB%OFFSET(2) = -L%NX
+         AB%OFFSET(3) = -1
+         AB%OFFSET(4) =  0
+         AB%OFFSET(5) =  1
+         AB%OFFSET(6) =  L%NX
+         AB%OFFSET(7) =  L%NX*L%NY
+      ENDIF
+
       IP  = 1
       DO IZ = 1, L%NZ
          DO IY = 1, L%NY
@@ -4623,7 +4639,7 @@ AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
 IF (.NOT.TWO_D)  AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
 AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
 
-AB%STENCIL(0) = AB%VAL(IC, ID)
+AB%STENCIL(AB%POS(0)) = AB%VAL(IC, ID)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_BANDED
 
@@ -4682,7 +4698,7 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
 
 ENDIF
 
-AB%STENCIL(-IOR0) = AB%VAL(IC, ID)
+AB%STENCIL(AB%POS(IOR0)) = AB%VAL(IC, ID)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG_BANDED
 
@@ -6085,21 +6101,9 @@ SELECT CASE (NTYPE)
                IF (TWO_D) THEN
                   AB%NSTENCIL = 5                      !> 5-point Laplacian
                   AB%POS(-3:3) = (/1,0,2,3,4,0,5/)     !> assignment of IOR settings to columns in matrix array
-                  AB%OFFSET(1) = -L%NX
-                  AB%OFFSET(2) = -1
-                  AB%OFFSET(3) =  0
-                  AB%OFFSET(4) =  1 
-                  AB%OFFSET(5) =  L%NX
                ELSE
                   AB%NSTENCIL = 7             !> 7-point Laplacian
                   AB%POS(-3:3) = (/1,2,3,4,5,6,7/)     !> assignment of IOR settings to columns in matrix array
-                  AB%OFFSET(1) = -L%NX*L%NY
-                  AB%OFFSET(2) = -L%NX
-                  AB%OFFSET(3) = -1
-                  AB%OFFSET(4) =  0
-                  AB%OFFSET(5) =  1
-                  AB%OFFSET(6) =  L%NX
-                  AB%OFFSET(7) =  L%NX*L%NY
                ENDIF
 
                AB%NA    = L%NCS * AB%NSTENCIL
@@ -10505,9 +10509,17 @@ CHARACTER(40) :: CINFO
 #ifdef WITH_MKL_FB
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.VAL_FB'
 CALL SCARC_ALLOCATE_REAL1_FB(AC%VAL_FB, 1, AC%NA, NINIT, CINFO)
+
+WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.STENCIL'
+CALL SCARC_ALLOCATE_REAL1_FB(AC%STENCIL_FB, 1, AC%NSTENCIL, NINIT, CINFO)
+
 #else
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.VAL'
 CALL SCARC_ALLOCATE_REAL1(AC%VAL, 1, AC%NA, NINIT, CINFO)
+
+WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.STENCIL'
+CALL SCARC_ALLOCATE_REAL1(AC%STENCIL, 1, AC%NSTENCIL, NINIT, CINFO)
+
 #endif
 
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.ROW'
@@ -10539,9 +10551,17 @@ CHARACTER(40) :: CINFO
 #ifdef WITH_MKL_FB
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.VAL_FB'
 CALL SCARC_ALLOCATE_REAL2_FB(AB%VAL_FB, 1, AB%NDIAG , 1, AB%NSTENCIL, NINIT, CINFO)
+
+WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.STENCIL'
+CALL SCARC_ALLOCATE_REAL1_FB(AB%STENCIL_FB, 1, AB%NSTENCIL, NINIT, CINFO)
+
 #else
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.VAL'
 CALL SCARC_ALLOCATE_REAL2(AB%VAL, 1, AB%NDIAG , 1, AB%NSTENCIL, NINIT, CINFO)
+
+WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.STENCIL'
+CALL SCARC_ALLOCATE_REAL1(AB%STENCIL, 1, AB%NSTENCIL, NINIT, CINFO)
+
 #endif
 
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.OFFSET'
