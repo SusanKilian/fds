@@ -3,5 +3,5 @@
 	<Configurations>
 		<Configuration Name="Debug|Win32"/>
 		<Configuration Name="Release|Win32"/>
-		<Configuration Name="Debug|x64"/>
+		<Configuration Name="Debug|x64" CommandArguments="&quot;C:\hhpberlin\Daten\GIT\B_Firemodels\fds\Verification\Pressure_Solver\pressure_iteration2d_scarc.fds&quot;"/>
 		<Configuration Name="Release|x64" CommandArguments="test1.fds" WorkingDirectory="&quot;C:\hhpberlin\Daten\GIT\B_Firemodels\fds\VisualStudio\Cases&quot;"/></Configurations></VisualStudioUserFile>
