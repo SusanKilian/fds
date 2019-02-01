@@ -8,6 +8,7 @@
 !include "include/mkl_pardiso.f90"
 !include "include/mkl_cluster_sparse_solver.f90"
 #endif
+#undef WITH_MKL
 
 MODULE SCRC
 
@@ -589,12 +590,13 @@ END TYPE SCARC_CONDENSED_TYPE
 !>    - row pointers
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_CSR_TYPE
-INTEGER :: NSTENCIL                                    !> number of points in matrix stencil
-INTEGER :: STENCIL(NSCARC_MAX_STENCIL,-3:3)            !> matrix stencil (for a cell in the middle and on all faces)
-INTEGER :: NA, NAS                                     !> number of matrix values in general and symmetric case
-INTEGER :: NC, NCS                                     !> number of matrix columns in general and symmetric case
-INTEGER :: NR                                          !> number of matrix rows
-INTEGER :: NSTORE = 0
+INTEGER  :: NSTENCIL                                    !> number of points in matrix stencil
+REAL(EB)  :: STENCIL(-3:3)                               !> matrix stencil (for a cell in the middle and on all faces)
+INTEGER  :: POS(-3:3)                                   !> Position of IOR's in STENCIL
+INTEGER  :: NA, NAS                                     !> number of matrix values in general and symmetric case
+INTEGER  :: NC, NCS                                     !> number of matrix columns in general and symmetric case
+INTEGER  :: NR                                          !> number of matrix rows
+INTEGER  :: NSTORE = 0
 #ifdef WITH_MKL_FB
 REAL(FB), ALLOCATABLE, DIMENSION (:) :: VAL_FB         !> values of matrix (single precision)
 #else
@@ -615,11 +617,11 @@ END TYPE SCARC_MATRIX_CSR_TYPE
 !>      - the offsets from the main diagonal
 !> --------------------------------------------------------------------------------------------
 TYPE SCARC_MATRIX_BANDED_TYPE
-INTEGER :: NSTENCIL                                    !> number of points in matrix stencil
-INTEGER :: STENCIL(NSCARC_MAX_STENCIL,-3:3)            !> matrix stencil (for a cell in the middle and on all faces)
-INTEGER :: NA, NAS                                     !> number of matrix values in general and symmetric cass
-INTEGER :: NDIAG, NLEN                                 !> length of main diagonal
-INTEGER :: POS(-3:3)                                   !> position of different IOR's within matrix storage array
+INTEGER  :: NSTENCIL                                    !> number of points in matrix stencil
+REAL(EB) :: STENCIL(-3:3)                               !> matrix stencil (for a cell in the middle and on all faces)
+INTEGER  :: POS(-3:3)                                   !> position of IOR's in STENCIL and in matrix storage array
+INTEGER  :: NA, NAS                                     !> number of matrix values in general and symmetric cass
+INTEGER  :: NDIAG, NLEN                                 !> length of main diagonal
 #ifdef WITH_MKL_FB
 REAL(FB), ALLOCATABLE, DIMENSION (:,:) :: VAL_FB       !> values of matrix (double precision)
 #else
@@ -4480,6 +4482,8 @@ IF (BMKL_LEVEL(NL)) THEN
 ENDIF
 #endif
 
+AC%STENCIL(AC%POS(0)) = AC%VAL(IP)
+
 IP = IP + 1
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_CSR
 
@@ -4560,6 +4564,8 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
 
 ENDIF
 
+AC%STENCIL(AC%POS(IOR0)) = AC%VAL(IP)
+
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG_CSR
 
 !> ------------------------------------------------------------------------------------------------
@@ -4618,6 +4624,8 @@ AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
 IF (.NOT.TWO_D)  AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
 AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
 
+AB%STENCIL(AB%POS(0)) = AB%VAL(IC, ID)
+
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_BANDED
 
 !> ------------------------------------------------------------------------------------------------
@@ -4674,6 +4682,8 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
    IF (IW /= 0) AB%VAL(IC, ID) = AB%VAL(IC, ID) + DSCAL
 
 ENDIF
+
+AB%STENCIL(AB%POS(IOR0)) = AB%VAL(IC, ID)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG_BANDED
 
@@ -6022,7 +6032,7 @@ END SUBROUTINE SCARC_SETUP_PARDISO
 !> ------------------------------------------------------------------------------------------------
 !> Set sizes for transfer matrices
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE  SCARC_SETUP_SIZES(NTYPE, NL)
+SUBROUTINE SCARC_SETUP_SIZES(NTYPE, NL)
 INTEGER, INTENT(IN) :: NTYPE, NL
 INTEGER :: IW
 INTEGER :: NM, NOM
@@ -6049,8 +6059,10 @@ SELECT CASE (NTYPE)
 
                IF (TWO_D) THEN
                   AC%NSTENCIL = 5
+                  AC%POS(-3:3) = (/1,2,0,3,0,4,5/)     !> assignment of IOR settings to position in stencil
                ELSE
                   AC%NSTENCIL = 7
+                  AC%POS(-3:3) = (/1,2,3,4,5,6,7/)
                ENDIF
 
                AC%NA  = L%NCS * AC%NSTENCIL
@@ -6072,21 +6084,23 @@ SELECT CASE (NTYPE)
                AB => POINT_TO_MATRIX_BANDED(NM, NL)
 
                IF (TWO_D) THEN
-                  AB%NSTENCIL = 5             !> 5-point Laplacian
-                  AB%POS( 3)  = 1             !> lower z-diag corresponds to 1. column
-                  AB%POS( 1)  = 2             !> lower x-diag corresponds to 2. column
-                  AB%POS( 0)  = 3             !> main    diag corresponds to 3. column
-                  AB%POS(-1)  = 4             !> upper z-diag corresponds to 4. column
-                  AB%POS(-3)  = 5             !> upper z-diag corresponds to 5. column
+                  AB%NSTENCIL = 5                      !> 5-point Laplacian
+                  AB%POS(-3:3) = (/1,2,0,3,0,4,5/)     !> assignment of IOR settings to columns in matrix array
+                  AB%OFFSET(1) = -L%NX
+                  AB%OFFSET(2) = -1
+                  AB%OFFSET(3) =  0
+                  AB%OFFSET(4) =  1 
+                  AB%OFFSET(5) =  L%NX
                ELSE
                   AB%NSTENCIL = 7             !> 7-point Laplacian
-                  AB%POS( 3)  = 1             !> lower z-diag corresponds to 1. column
-                  AB%POS( 2)  = 2             !> lower y-diag corresponds to 2. column
-                  AB%POS( 1)  = 2             !> lower x-diag corresponds to 3. column
-                  AB%POS( 0)  = 3             !> main    diag corresponds to 4. column
-                  AB%POS(-1)  = 4             !> upper z-diag corresponds to 5. column
-                  AB%POS(-2)  = 5             !> upper y-diag corresponds to 6. column
-                  AB%POS(-3)  = 5             !> upper z-diag corresponds to 7. column
+                  AB%POS(-3:3) = (/1,2,3,4,5,6,7/)     !> assignment of IOR settings to columns in matrix array
+                  AB%OFFSET(1) = -L%NX*L%NY
+                  AB%OFFSET(2) = -L%NX
+                  AB%OFFSET(3) = -1
+                  AB%OFFSET(4) =  0
+                  AB%OFFSET(5) =  1
+                  AB%OFFSET(6) =  L%NX
+                  AB%OFFSET(7) =  L%NX*L%NY
                ENDIF
 
                AB%NA    = L%NCS * AB%NSTENCIL
@@ -6401,11 +6415,11 @@ SUBROUTINE SCARC_VECTOR_SUM(NVEC1, NVEC2, SCAL1, SCAL2, NL)
 INTEGER , INTENT(IN):: NVEC1, NVEC2, NL
 REAL(EB), INTENT(IN):: SCAL1, SCAL2
 INTEGER  :: NM
+REAL(EB), DIMENSION(:), POINTER ::  V1, V2
 #if defined(WITH_MKL)
 EXTERNAL :: DAXPBY
-#endif
-REAL(EB), DIMENSION(:), POINTER ::  V1, V2
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
+#endif
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    V1 => POINT_TO_VECTOR(NM, NL, NVEC1)
@@ -6428,11 +6442,11 @@ SUBROUTINE SCARC_VECTOR_COPY(NVEC1, NVEC2, SCAL1, NL)
 INTEGER , INTENT(IN):: NVEC1, NVEC2, NL
 REAL(EB), INTENT(IN):: SCAL1
 INTEGER  :: NM
+REAL(EB), DIMENSION(:), POINTER ::  V1, V2
 #if defined(WITH_MKL)
 EXTERNAL :: DCOPY, DSCAL
-#endif
-REAL(EB), DIMENSION(:), POINTER ::  V1, V2
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
+#endif
 
 DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
@@ -6973,19 +6987,23 @@ WRITE(*,*) 'CG1'
 !>   - Get right hand side vector and clear solution vectors
 !> ------------------------------------------------------------------------------------------------
 CALL SCARC_SETUP_SOLVER(NS, NP)
+WRITE(*,*) 'CG1'
 CALL SCARC_SETUP_WORKSPACE(NS, NL)
+WRITE(*,*) 'CG11'
 
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (X, 'X INIT0', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'B INIT0', NL)
 #endif
 
+WRITE(*,*) 'CG12'
 IF (N_DIRIC_GLOBAL(NLEVEL_MIN) == 0) THEN
    CALL SCARC_VECTOR_INIT (X, 0.0_EB, NL)                    ! set x to zero
    CALL SCARC_FILTER_MEANVALUE(B, NL)                        ! filter out mean value of B
    CALL SCARC_SETUP_CONDENSING (B, NL, 1)                    ! setup condensed system
 ENDIF
 
+WRITE(*,*) 'CG13'
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (X, 'X INIT1', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'B INIT1', NL)
@@ -10120,6 +10138,7 @@ WRITE(MSG%LU_VERBOSE,'(A30,2(A15,I6))') 'POINT_TO_FFT',': NM=', NM,': NL=',NL
 #endif
 END FUNCTION POINT_TO_FFT
 
+#ifdef WITH_MKL
 !> ------------------------------------------------------------------------------------------------
 !> Point to environment of MKL solver on specified mesh - use current mesh, but variable level
 !> ------------------------------------------------------------------------------------------------
@@ -10131,6 +10150,7 @@ POINT_TO_MKL  => SCARC(NM)%LEVEL(NL)%MKL
 WRITE(MSG%LU_VERBOSE,'(A30,2(A15,I6))') 'POINT_TO_MKL',': NM=', NM,': NL=',NL
 #endif
 END FUNCTION POINT_TO_MKL
+#endif
 
 !> ------------------------------------------------------------------------------------------------
 !> Point to environment of specified obstruction - use current mesh and level
@@ -11227,136 +11247,137 @@ END SELECT
 END SUBROUTINE SCARC_DEBUG_QUANTITY
 
 
-!> ------------------------------------------------------------------------------------------------
-!> Print out vector information on level NL for matlab
-!> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MATLAB_VECTOR (NVEC, CVEC, NL)
-INTEGER, INTENT(IN):: NVEC, NL
-INTEGER :: NM
-CHARACTER (*), INTENT(IN) :: CVEC
-INTEGER :: JC, MVEC
-CHARACTER(60):: VECTOR
-REAL (EB), POINTER, DIMENSION(:) :: VC
-TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
+!!> ------------------------------------------------------------------------------------------------
+!!> Print out vector information on level NL for matlab
+!!> ------------------------------------------------------------------------------------------------
+!SUBROUTINE SCARC_MATLAB_VECTOR (NVEC, CVEC, NL)
+!INTEGER, INTENT(IN):: NVEC, NL
+!INTEGER :: NM
+!CHARACTER (*), INTENT(IN) :: CVEC
+!INTEGER :: JC, MVEC
+!CHARACTER(60):: VECTOR
+!REAL (EB), POINTER, DIMENSION(:) :: VC
+!TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
+!
+!DO NM = 1, NMESHES
+!
+!   IF (PROCESS(NM) /= MYID) CYCLE
+!   L  => POINT_TO_LEVEL(NM, NL)
+!   VC => POINT_TO_VECTOR (NM, NL, NVEC)
+!
+!   WRITE (VECTOR, '(A,A1,A,i2.2,A,i2.2,A)') 'matlab/',CVEC,'_mesh',NM,'_level',NL,'_vec.txt'
+!   MVEC=GET_FILE_NUMBER()
+!   OPEN(MVEC,FILE=VECTOR)
+!   WRITE(MVEC, 1000) CVEC
+!   SELECT CASE (L%NCS)
+!      CASE (4)
+!         WRITE(MVEC,1004) (VC(JC),JC=1,L%NCS)
+!      CASE (8)
+!         WRITE(MVEC,1008) (VC(JC),JC=1,L%NCS)
+!      CASE (12)
+!         WRITE(MVEC,1012) (VC(JC),JC=1,L%NCS)
+!      CASE (16)
+!         WRITE(MVEC,1016) (VC(JC),JC=1,L%NCS)
+!      CASE (24)
+!         WRITE(MVEC,1024) (VC(JC),JC=1,L%NCS)
+!      CASE (32)
+!         WRITE(MVEC,1032) (VC(JC),JC=1,L%NCS)
+!      CASE (64)
+!         WRITE(MVEC,1064) (VC(JC),JC=1,L%NCS)
+!      CASE DEFAULT
+!         WRITE(*,'(2A,I8)') TRIM('MATLAB_VECTOR'),': Wrong value for ', L%NCS
+!   END SELECT
+!   WRITE(MVEC, 1100)
+!   CLOSE(MVEC)
+!ENDDO
+!
+!1000 FORMAT(a,' = [ ')
+!1004 FORMAT( 3(f24.16,';'),f24.16)
+!1008 FORMAT( 7(f24.16,';'),f24.16)
+!1012 FORMAT(11(f24.16,';'),f24.16)
+!1016 FORMAT(15(f24.16,';'),f24.16)
+!1024 FORMAT(23(f24.16,';'),f24.16)
+!1032 FORMAT(31(f24.16,';'),f24.16)
+!1064 FORMAT(63(f24.16,';'),f24.16)
+!1100 FORMAT(' ] ')
+!END SUBROUTINE SCARC_MATLAB_VECTOR
+!
+!
+!!> ------------------------------------------------------------------------------------------------
+!!> Print out matrix information on level NL for matlab
+!!> ------------------------------------------------------------------------------------------------
+!SUBROUTINE SCARC_MATLAB_MATRIX(VAL, ROW, COL, NC1, NC2, NM, NL, CMATRIX)
+!REAL(EB), DIMENSION(:), INTENT(IN) :: VAL
+!INTEGER , DIMENSION(:), INTENT(IN) :: ROW
+!INTEGER , DIMENSION(:), INTENT(IN) :: COL
+!INTEGER , INTENT(IN) :: NM, NL, NC1, NC2
+!CHARACTER(1), INTENT(IN):: CMATRIX
+!INTEGER :: IC, JC, ICOL, MMATRIX
+!CHARACTER(60):: MATRIX
+!REAL(EB):: MATRIX_LINE(1000)
+!
+!WRITE (MATRIX, '(A,A1,A,i2.2,A,i2.2,A)') 'matlab/',CMATRIX,'_mesh',NM,'_level',NL,'_mat.txt'
+!MMATRIX=GET_FILE_NUMBER()
+!OPEN(MMATRIX,FILE=MATRIX)
+!
+!!WRITE(LU_SCARC,*) 'PRINTING MATLAB INFORMATION FOR LEVEL ', NL
+!!WRITE(LU_SCARC,*) 'NC1  =',NC1
+!!WRITE(LU_SCARC,*) 'NC2  =',NC2
+!!WRITE(LU_SCARC,*) 'CMATRIX=',CMATRIX
+!
+!WRITE(MMATRIX, 1000) CMATRIX
+!DO IC = 1, NC1
+!   MATRIX_LINE=0.0_EB
+!   DO JC = 1, NC2
+!      DO  ICOL= ROW(IC), ROW(IC+1)-1
+!         IF (COL(ICOL)==JC) MATRIX_LINE(JC)=VAL(ICOL)
+!      ENDDO
+!   ENDDO
+!   SELECT CASE (NC2)
+!      CASE (4)
+!         WRITE(MMATRIX,1004) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE (8)
+!         WRITE(MMATRIX,1008) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE (12)
+!         WRITE(MMATRIX,1012) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE (16)
+!         WRITE(MMATRIX,1016) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE (24)
+!         WRITE(MMATRIX,1024) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE (32)
+!         WRITE(MMATRIX,1032) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE (64)
+!         WRITE(MMATRIX,1064) (MATRIX_LINE(JC),JC=1,NC2)
+!      CASE DEFAULT
+!         WRITE(*,'(2A,I8)') TRIM('MATLAB_MATRIX'),': Wrong value for ', NC2
+!   END SELECT
+!ENDDO
+!WRITE(MMATRIX, 1100)
+!
+!CLOSE(MMATRIX)
+!
+!1000 FORMAT(a,' = [ ')
+!1004 FORMAT( 3(f7.1,','),f7.1,';')
+!1008 FORMAT( 7(f7.1,','),f7.1,';')
+!1012 FORMAT(11(f7.1,','),f7.1,';')
+!1016 FORMAT(15(f7.1,','),f7.1,';')
+!1024 FORMAT(23(f7.1,','),f7.1,';')
+!1032 FORMAT(31(f7.1,','),f7.1,';')
+!1064 FORMAT(63(f7.1,','),f7.1,';')
+!!1104 FORMAT(i4,' :', 4(f6.2))
+!!1108 FORMAT(i4,' :', 8(f6.2))
+!!1112 FORMAT(i4,' :',12(f6.2))
+!!1116 FORMAT(i4,' :',16(f6.2))
+!!1124 FORMAT(i4,' :',24(f6.2))
+!!1132 FORMAT(i4,' :',32(f6.2))
+!!1164 FORMAT(i4,' :',64(f6.2))
+!1100 FORMAT(' ] ')
+!END SUBROUTINE SCARC_MATLAB_MATRIX
 
-DO NM = 1, NMESHES
-
-   IF (PROCESS(NM) /= MYID) CYCLE
-   L  => POINT_TO_LEVEL(NM, NL)
-   VC => POINT_TO_VECTOR (NM, NL, NVEC)
-
-   WRITE (VECTOR, '(A,A1,A,i2.2,A,i2.2,A)') 'matlab/',CVEC,'_mesh',NM,'_level',NL,'_vec.txt'
-   MVEC=GET_FILE_NUMBER()
-   OPEN(MVEC,FILE=VECTOR)
-   WRITE(MVEC, 1000) CVEC
-   SELECT CASE (L%NCS)
-      CASE (4)
-         WRITE(MVEC,1004) (VC(JC),JC=1,L%NCS)
-      CASE (8)
-         WRITE(MVEC,1008) (VC(JC),JC=1,L%NCS)
-      CASE (12)
-         WRITE(MVEC,1012) (VC(JC),JC=1,L%NCS)
-      CASE (16)
-         WRITE(MVEC,1016) (VC(JC),JC=1,L%NCS)
-      CASE (24)
-         WRITE(MVEC,1024) (VC(JC),JC=1,L%NCS)
-      CASE (32)
-         WRITE(MVEC,1032) (VC(JC),JC=1,L%NCS)
-      CASE (64)
-         WRITE(MVEC,1064) (VC(JC),JC=1,L%NCS)
-      CASE DEFAULT
-         WRITE(*,'(2A,I8)') TRIM('MATLAB_VECTOR'),': Wrong value for ', L%NCS
-   END SELECT
-   WRITE(MVEC, 1100)
-   CLOSE(MVEC)
-ENDDO
-
-1000 FORMAT(a,' = [ ')
-1004 FORMAT( 3(f24.16,';'),f24.16)
-1008 FORMAT( 7(f24.16,';'),f24.16)
-1012 FORMAT(11(f24.16,';'),f24.16)
-1016 FORMAT(15(f24.16,';'),f24.16)
-1024 FORMAT(23(f24.16,';'),f24.16)
-1032 FORMAT(31(f24.16,';'),f24.16)
-1064 FORMAT(63(f24.16,';'),f24.16)
-1100 FORMAT(' ] ')
-END SUBROUTINE SCARC_MATLAB_VECTOR
-
-
-!> ------------------------------------------------------------------------------------------------
-!> Print out matrix information on level NL for matlab
-!> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MATLAB_MATRIX(VAL, ROW, COL, NC1, NC2, NM, NL, CMATRIX)
-REAL(EB), DIMENSION(:), INTENT(IN) :: VAL
-INTEGER , DIMENSION(:), INTENT(IN) :: ROW
-INTEGER , DIMENSION(:), INTENT(IN) :: COL
-INTEGER , INTENT(IN) :: NM, NL, NC1, NC2
-CHARACTER(1), INTENT(IN):: CMATRIX
-INTEGER :: IC, JC, ICOL, MMATRIX
-CHARACTER(60):: MATRIX
-REAL(EB):: MATRIX_LINE(1000)
-
-WRITE (MATRIX, '(A,A1,A,i2.2,A,i2.2,A)') 'matlab/',CMATRIX,'_mesh',NM,'_level',NL,'_mat.txt'
-MMATRIX=GET_FILE_NUMBER()
-OPEN(MMATRIX,FILE=MATRIX)
-
-!WRITE(LU_SCARC,*) 'PRINTING MATLAB INFORMATION FOR LEVEL ', NL
-!WRITE(LU_SCARC,*) 'NC1  =',NC1
-!WRITE(LU_SCARC,*) 'NC2  =',NC2
-!WRITE(LU_SCARC,*) 'CMATRIX=',CMATRIX
-
-WRITE(MMATRIX, 1000) CMATRIX
-DO IC = 1, NC1
-   MATRIX_LINE=0.0_EB
-   DO JC = 1, NC2
-      DO  ICOL= ROW(IC), ROW(IC+1)-1
-         IF (COL(ICOL)==JC) MATRIX_LINE(JC)=VAL(ICOL)
-      ENDDO
-   ENDDO
-   SELECT CASE (NC2)
-      CASE (4)
-         WRITE(MMATRIX,1004) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE (8)
-         WRITE(MMATRIX,1008) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE (12)
-         WRITE(MMATRIX,1012) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE (16)
-         WRITE(MMATRIX,1016) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE (24)
-         WRITE(MMATRIX,1024) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE (32)
-         WRITE(MMATRIX,1032) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE (64)
-         WRITE(MMATRIX,1064) (MATRIX_LINE(JC),JC=1,NC2)
-      CASE DEFAULT
-         WRITE(*,'(2A,I8)') TRIM('MATLAB_MATRIX'),': Wrong value for ', NC2
-   END SELECT
-ENDDO
-WRITE(MMATRIX, 1100)
-
-CLOSE(MMATRIX)
-
-1000 FORMAT(a,' = [ ')
-1004 FORMAT( 3(f7.1,','),f7.1,';')
-1008 FORMAT( 7(f7.1,','),f7.1,';')
-1012 FORMAT(11(f7.1,','),f7.1,';')
-1016 FORMAT(15(f7.1,','),f7.1,';')
-1024 FORMAT(23(f7.1,','),f7.1,';')
-1032 FORMAT(31(f7.1,','),f7.1,';')
-1064 FORMAT(63(f7.1,','),f7.1,';')
-!1104 FORMAT(i4,' :', 4(f6.2))
-!1108 FORMAT(i4,' :', 8(f6.2))
-!1112 FORMAT(i4,' :',12(f6.2))
-!1116 FORMAT(i4,' :',16(f6.2))
-!1124 FORMAT(i4,' :',24(f6.2))
-!1132 FORMAT(i4,' :',32(f6.2))
-!1164 FORMAT(i4,' :',64(f6.2))
-1100 FORMAT(' ] ')
-END SUBROUTINE SCARC_MATLAB_MATRIX
+!!> ================================================================================================
+!!> END DEBUGGING PART  -  only enabled if directive is set
+!!> ================================================================================================
 #endif
-!> ================================================================================================
-!> END DEBUGGING PART  -  only enabled if directive is set
-!> ================================================================================================
 
 END MODULE SCRC
 !WRITE(*,*) 'TEST:', __LINE__,__FILE__
