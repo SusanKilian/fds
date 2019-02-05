@@ -4481,7 +4481,7 @@ INTEGER, INTENT(INOUT) :: IP
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_MATRIX_CSR_TYPE), POINTER :: AC=>NULL()
 
-L => POINT_TO_LEVEL(NM, NL)
+L  => POINT_TO_LEVEL(NM, NL)
 AC => POINT_TO_MATRIX_CSR(NM, NL)
 
 AC%VAL(IP) = - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
@@ -4492,12 +4492,11 @@ AC%ROW(IC) = IP
 AC%COL(IP) = IC
 
 #ifdef WITH_MKL
-IF (BMKL_LEVEL(NL)) THEN
-   AC%COL_GLOBAL(IP) = AC%COL(IP) + L%NC_OFFSET(NM)
-ENDIF
+IF (BMKL_LEVEL(NL)) AC%COL_GLOBAL(IP) = AC%COL(IP) + L%NC_OFFSET(NM)
 #endif
 
-AC%STENCIL(0) = AC%VAL(IP)
+AC%STENCIL(AC%POS(0)) = AC%VAL(IP)
+WRITE(*,*) 'DIAG: AC%STENCIL(',AC%POS(0),')=',AC%VAL(IP)
 
 IP = IP + 1
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_CSR
@@ -4548,6 +4547,10 @@ IF (BINTERNAL) THEN
    IF (PRES_ON_WHOLE_DOMAIN .OR. L%CELL_STATE(IX2, IY2, IZ2) == NSCARC_CELL_GASPHASE) THEN
       AC%VAL(IP) = AC%VAL(IP) + DSCAL
       AC%COL(IP) = L%CELL_NUMBER(IX2, IY2, IZ2)
+
+      AC%STENCIL(AC%POS(-IOR0)) = AC%VAL(IP)
+      WRITE(*,*) 'SUBDIAG: AC%STENCIL(',AC%POS(-IOR0),')=',AC%VAL(IP)
+
 #ifdef WITH_MKL
       IF (BMKL_LEVEL(NL)) AC%COL_GLOBAL(IP)= AC%COL(IP) + L%NC_OFFSET(NM)
 #endif
@@ -4565,6 +4568,9 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
       AC%VAL(IP) = AC%VAL(IP) + DSCAL
       AC%COL(IP) = L%WALL(IW)%ICE(1)                   !> store its extended number in matrix column pointers
 
+      AC%STENCIL(AC%POS(-IOR0)) = AC%VAL(IP)
+      WRITE(*,*) 'SUBDIAG: AC%STENCIL(',AC%POS(-IOR0),')=',AC%VAL(IP)
+
 #ifdef WITH_MKL
       IF (BMKL_LEVEL(NL)) THEN                         !> if MKL method used, also store its global number
          IX = L%WALL(IW)%IXG
@@ -4578,8 +4584,6 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
    ENDIF
 
 ENDIF
-
-AC%STENCIL(-IOR0) = AC%VAL(IP)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG_CSR
 
@@ -4630,16 +4634,16 @@ INTEGER :: ID
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_MATRIX_BANDED_TYPE), POINTER :: AB=>NULL()
 
-L => POINT_TO_LEVEL(NM, NL)
+L  => POINT_TO_LEVEL(NM, NL)
 AB => POINT_TO_MATRIX_BANDED(NM, NL)
 
 ID = AB%POS(0)               !> get column vector corresponding to matrix diagonal
 
-AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
-IF (.NOT.TWO_D)  AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
-AB%VAL(IC, ID) = AB%VAL(IC, ID) - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
+AB%VAL(ID, IC) = AB%VAL(ID, IC) - 2.0_EB/(L%DXL(IX-1)*L%DXL(IX))
+IF (.NOT.TWO_D)  AB%VAL(ID, IC) = AB%VAL(ID, IC) - 2.0_EB/(L%DYL(IY-1)*L%DYL(IY))
+AB%VAL(ID, IC) = AB%VAL(ID, IC) - 2.0_EB/(L%DZL(IZ-1)*L%DZL(IZ))
 
-AB%STENCIL(AB%POS(0)) = AB%VAL(IC, ID)
+AB%STENCIL(AB%POS(0)) = AB%VAL(ID, IC)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_BANDED
 
@@ -4685,7 +4689,7 @@ ENDIF
 IF (BINTERNAL) THEN
 
    IF (PRES_ON_WHOLE_DOMAIN .OR. L%CELL_STATE(IX2, IY2, IZ2) == NSCARC_CELL_GASPHASE) THEN
-      AB%VAL(IC, ID) = AB%VAL(IC, ID) + DSCAL
+      AB%VAL(ID, IC) = AB%VAL(ID, IC) + DSCAL
    ELSE
      CALL SCARC_SHUTDOWN(NSCARC_ERROR_MATRIX_SUBDIAG, SCARC_NONE, NSCARC_NONE)
    ENDIF
@@ -4694,11 +4698,11 @@ IF (BINTERNAL) THEN
 ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
 
    IW = ASSIGN_SUBDIAG_TYPE (IC, IOR0, NM, NL)         !> get IW of a possibly suitable neighbor at face IOR0
-   IF (IW /= 0) AB%VAL(IC, ID) = AB%VAL(IC, ID) + DSCAL
+   IF (IW /= 0) AB%VAL(ID, IC) = AB%VAL(ID, IC) + DSCAL
 
 ENDIF
 
-AB%STENCIL(AB%POS(IOR0)) = AB%VAL(IC, ID)
+AB%STENCIL(AB%POS(IOR0)) = AB%VAL(ID, IC)
 
 END SUBROUTINE SCARC_SETUP_MATRIX_SUBDIAG_BANDED
 
@@ -6108,7 +6112,7 @@ SELECT CASE (NTYPE)
 
                AB%NA    = L%NCS * AB%NSTENCIL
                AB%NAS   = L%NCS * AB%NSTENCIL
-               AB%NDIAG  = L%NCS
+               AB%NDIAG = L%NCS
 
                !> Determine sizes of overlapped parts for later communication with corresponding neighbors
                DO IW = 1, L%NW
@@ -6224,7 +6228,6 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
 
       SELECT_KRYLOV: SELECT CASE (TYPE_KRYLOV)
          CASE (NSCARC_KRYLOV_CG)
-WRITE(*,*) 'CALLING CG '
             CALL SCARC_METHOD_CG  (NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
          CASE (NSCARC_KRYLOV_CGBARO)
             CALL SCARC_METHOD_CGBARO (NSCARC_STACK_ROOT, NSCARC_STACK_ZERO, NLEVEL_MIN)
@@ -7056,8 +7059,6 @@ REAL (EB) :: SIGMA0, SIGMA1, ALPHA0, GAMMA0
 REAL (EB) :: TNOW
 
 TNOW = CURRENT_TIME()
-
-WRITE(*,*) 'CG1'
 
 !> ------------------------------------------------------------------------------------------------
 !> Initialization:
@@ -10625,14 +10626,14 @@ CHARACTER(40) :: CINFO
 
 #ifdef WITH_MKL_FB
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.VAL_FB'
-CALL SCARC_ALLOCATE_REAL2_FB(AB%VAL_FB, 1, AB%NDIAG , 1, AB%NSTENCIL, NINIT, CINFO)
+CALL SCARC_ALLOCATE_REAL2_FB(AB%VAL_FB, 1, AB%NSTENCIL , 1, AB%NDIAG, NINIT, CINFO)
 
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.STENCIL'
 CALL SCARC_ALLOCATE_REAL1_FB(AB%STENCIL_FB, 1, AB%NSTENCIL, NINIT, CINFO)
 
 #else
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.VAL'
-CALL SCARC_ALLOCATE_REAL2(AB%VAL, 1, AB%NDIAG , 1, AB%NSTENCIL, NINIT, CINFO)
+CALL SCARC_ALLOCATE_REAL2(AB%VAL, 1, AB%NSTENCIL , 1, AB%NDIAG, NINIT, CINFO)
 
 WRITE(CINFO,'(A,A,I2.2,A)') TRIM(CMATRIX),'_LEV',NL,'.STENCIL'
 CALL SCARC_ALLOCATE_REAL1(AB%STENCIL, 1, AB%NSTENCIL, NINIT, CINFO)
@@ -10853,12 +10854,13 @@ END SUBROUTINE SCARC_DEBUG_LEVEL
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DEBUG_QUANTITY(NTYPE, NL, CQUANTITY)
 INTEGER, INTENT(IN) :: NTYPE, NL
-INTEGER :: NM, NOM, IP, IC, IW, I, J, IOR0, INBR, III, JJJ, KKK, IWG
+INTEGER :: NM, NOM, IP, IC, ID, IW, I, J, IOR0, INBR, III, JJJ, KKK, IWG
 CHARACTER (*), INTENT(IN) :: CQUANTITY
 TYPE (MESH_TYPE), POINTER :: M=>NULL()
 TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL(), OL=>NULL()
 TYPE (SCARC_SOLVER_TYPE), POINTER :: SOL=>NULL()
 TYPE (SCARC_MATRIX_CSR_TYPE), POINTER :: AC=>NULL()
+TYPE (SCARC_MATRIX_BANDED_TYPE), POINTER :: AB=>NULL()
 #ifdef WITH_MKL
 TYPE (SCARC_MATRIX_CSR_TYPE), POINTER :: AC_SYM=>NULL()
 #endif
@@ -10917,7 +10919,7 @@ SELECT CASE (NTYPE)
                L => POINT_TO_LEVEL(NM, NL)
                AC => POINT_TO_MATRIX_CSR(NM, NL)
                WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
-               WRITE(MSG%LU_DEBUG,*) '----------- SHOWING FULL MATRIX ENTRIES'
+               WRITE(MSG%LU_DEBUG,*) '----------- SHOWING FULL CSR MATRIX ENTRIES'
                WRITE(MSG%LU_DEBUG,*) 'NCS =',L%NCS
                WRITE(MSG%LU_DEBUG,*) 'NV =',AC%NA
                WRITE(MSG%LU_DEBUG,*) 'NC =',AC%NC
@@ -10925,7 +10927,11 @@ SELECT CASE (NTYPE)
                WRITE(MSG%LU_DEBUG,*) 'SIZE(AC%VAL) =',SIZE(AC%VAL)
                WRITE(MSG%LU_DEBUG,*) 'SIZE(AC%COL) =',SIZE(AC%COL)
                WRITE(MSG%LU_DEBUG,*) 'SIZE(AC%ROW) =',SIZE(AC%ROW)
-               WRITE(MSG%LU_DEBUG,*) '---------------------- ACROW:'
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AB%POS:'
+               WRITE(MSG%LU_DEBUG,'(4i9)') (AC%POS(IC), IC=-3,3)
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AC%STENCIL:'
+               WRITE(MSG%LU_DEBUG,'(4F12.6)') (AC%STENCIL(IC), IC=1,AC%NSTENCIL)
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AC%ROW:'
                WRITE(MSG%LU_DEBUG,'(4i9)') (AC%ROW(IC), IC=1,AC%NR)
                WRITE(MSG%LU_DEBUG,*) '---------------------- AC%COL:'
                DO IC = 1, AC%NR-1
@@ -10937,26 +10943,25 @@ SELECT CASE (NTYPE)
                   !WRITE(MSG%LU_DEBUG,*) IC,':',(AC%VAL(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
                ENDDO
 #ifdef WITH_MKL
-               IF ((TYPE_METHOD == NSCARC_METHOD_LUDECOMP) .AND. (TYPE_LUDECOMP == NSCARC_MKL_GLOBAL)) THEN
-                  !WRITE(MSG%LU_DEBUG,*) '---------------------- AG_COL:'
-                  !DO IC = 1, L%NCS
-                     !WRITE(MSG%LU_DEBUG,'(i5,a,20i9)') IC,':',(AC%COLG(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
-                     !WRITE(MSG%LU_DEBUG,*)  IC,':',(AC%COLG(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
-                  !ENDDO
-               ENDIF
-               DO IC=1,AC%NR-1
-                  DO IP=AC%ROW(IC),AC%ROW(IC+1)-1
-                      !WRITE(MSG%LU_DEBUG,'(2I8,F24.12)') IC,AC%COL(IP),AC%VAL(IP)
-                      WRITE(MSG%LU_DEBUG,'(2I8,F24.12)') IC,AC%COL(IP),AC%VAL(IP)
-                      !WRITE(MSG%LU_DEBUG,*) IC,AC%COL(IP),AC%VAL(IP)
-                  ENDDO
-                  WRITE(MSG%LU_DEBUG,*)
-               ENDDO
-               DO IC=1,AC%NR-1
-                  DO IP=AC%ROW(IC),AC%ROW(IC+1)-1
-                      IF (IC == AC%COL(IP)) WRITE(MSG%LU_DEBUG,'(2I8,F24.12)') IC,AC%COL(IP),AC%VAL(IP)
-                  ENDDO
-               ENDDO
+               !IF ((TYPE_METHOD == NSCARC_METHOD_LUDECOMP) .AND. (TYPE_LUDECOMP == NSCARC_MKL_GLOBAL)) THEN
+               !   WRITE(MSG%LU_DEBUG,*) '---------------------- AG_COL:'
+               !   DO IC = 1, L%NCS
+               !      WRITE(MSG%LU_DEBUG,'(i5,a,20i9)') IC,':',(AC%COLG(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
+               !      WRITE(MSG%LU_DEBUG,*)  IC,':',(AC%COLG(IP),IP=AC%ROW(IC),AC%ROW(IC+1)-1)
+               !   ENDDO
+               !ENDIF
+               !DO IC=1,AC%NR-1
+               !   DO IP=AC%ROW(IC),AC%ROW(IC+1)-1
+               !       WRITE(MSG%LU_DEBUG,'(2I8,F24.12)') IC,AC%COL(IP),AC%VAL(IP)
+               !       WRITE(MSG%LU_DEBUG,*) IC,AC%COL(IP),AC%VAL(IP)
+               !   ENDDO
+               !   WRITE(MSG%LU_DEBUG,*)
+               !ENDDO
+               !DO IC=1,AC%NR-1
+               !   DO IP=AC%ROW(IC),AC%ROW(IC+1)-1
+               !       IF (IC == AC%COL(IP)) WRITE(MSG%LU_DEBUG,'(2I8,F24.12)') IC,AC%COL(IP),AC%VAL(IP)
+               !   ENDDO
+               !ENDDO
 #endif
             ENDDO
 
@@ -10965,7 +10970,27 @@ SELECT CASE (NTYPE)
             !CALL SCARC_MATLAB_MATRIX(AC%VAL, AC%ROW, AC%COL, L%NCS, L%NCS, NM, NL, 'A')
 
          CASE (NSCARC_MATRIX_BANDED)
-            WRITE(*,*) 'SCARC_DEBUG_QUANTITY, DEBUG_MATRIX: TOFIX'
+            DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
+               L => POINT_TO_LEVEL(NM, NL)
+               AB => POINT_TO_MATRIX_BANDED(NM, NL)
+               WRITE(MSG%LU_DEBUG,1000) CQUANTITY, NM, NL
+               WRITE(MSG%LU_DEBUG,*) '----------- SHOWING FULL BANDED MATRIX ENTRIES'
+               WRITE(MSG%LU_DEBUG,*) 'NCS =',L%NCS
+               WRITE(MSG%LU_DEBUG,*) 'NA  =',AB%NA
+               WRITE(MSG%LU_DEBUG,*) 'NAS =',AB%NAS
+               WRITE(MSG%LU_DEBUG,*) 'NDIAG =',AB%NDIAG
+               WRITE(MSG%LU_DEBUG,*) 'SIZE(AB%VAL) =',SIZE(AB%VAL)
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AB%POS:'
+               WRITE(MSG%LU_DEBUG,'(4i9)') (AB%POS(IC), IC=-3,3)
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AB%STENCIL:'
+               WRITE(MSG%LU_DEBUG,'(4i9)') (AB%STENCIL(IC), IC=1,AB%NSTENCIL)
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AB%OFFSET:'
+               WRITE(MSG%LU_DEBUG,'(4i9)') (AB%OFFSET(IC), IC=1,AB%NSTENCIL)
+               WRITE(MSG%LU_DEBUG,*) '---------------------- AB%VAL:'
+               DO ID = 1, AB%NSTENCIL
+                  WRITE(MSG%LU_DEBUG,'(i5,a,20F12.6)') IC,':',(AB%VAL(ID, IC),IC=1,AB%NDIAG)
+               ENDDO
+            ENDDO
 
       END SELECT
 
