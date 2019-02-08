@@ -4701,8 +4701,9 @@ INTEGER, DIMENSION(:), ALLOCATABLE :: KCOL_AUX, KC_AUX
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_MATRIX_CSR_TYPE), POINTER :: AC=>NULL(), AC_SYM=>NULL()
 
-L  => POINT_TO_LEVEL(NM, NL)
-AC => POINT_TO_MATRIX_CSR(NM, NL)
+L      => POINT_TO_LEVEL(NM, NL)
+AC     => POINT_TO_MATRIX_CSR(NM, NL)
+AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
 
 !> ------------------------------------------------------------------------------------------------
 !> Store only symmetric parts of matrix (diagonal and upper part)
@@ -4757,9 +4758,8 @@ ENDIF
 !> ------------------------------------------------------------------------------------------------
 !> allocate storage for symmetric matrix and its column and row pointers
 !> ------------------------------------------------------------------------------------------------
-AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
-CALL SCARC_ALLOCATE_MATRIX_CSR(AC_SYM, 'AC_SYM', NL, NSCARC_INIT_ZERO)
 
+CALL SCARC_ALLOCATE_MATRIX_CSR(AC_SYM, 'AC_SYM', NL, NSCARC_INIT_ZERO)
 IF (BMKL_LEVEL(NL)) THEN
    CALL SCARC_ALLOCATE_INT1(KCOL_AUX, 1, AC%NSTENCIL, NSCARC_INIT_NONE, 'KCOL_AUX')
    CALL SCARC_ALLOCATE_INT1(KC_AUX  , 1, AC%NSTENCIL, NSCARC_INIT_NONE, 'KC_AUX')
