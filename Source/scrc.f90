@@ -4284,18 +4284,6 @@ CALL SCARC_DEBUG_QUANTITY (NSCARC_DEBUG_WALLINFO, NLEVEL_MIN,  'SYSTEM-WALL')
 END SUBROUTINE SCARC_SETUP_SYSTEM
 
 !> ------------------------------------------------------------------------------------------------
-!> Check whether the cell (IX, IY, IZ) is a valid grid cell which needs a matrix entry
-!> ------------------------------------------------------------------------------------------------
-LOGICAL FUNCTION NO_VALID_CELL(IX, IY, IZ, NM, NL)
-INTEGER, INTENT(IN) :: IX, IY, IZ, NM, NL
-TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
-NO_VALID_CELL = .FALSE.
-L => POINT_TO_LEVEL(NM, NL)
-IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(IX, IY, IZ)/=NSCARC_CELL_GASPHASE) NO_VALID_CELL = .TRUE.
-RETURN
-END FUNCTION NO_VALID_CELL
-
-!> ------------------------------------------------------------------------------------------------
 !> Allocate matrix for the usual 5-point-stencil (2D) or 7-point-stencil (3D)
 !> Use compact storage technique:
 !>
@@ -4334,7 +4322,7 @@ SELECT_STORAGE_TYPE: SELECT CASE (TYPE_MATRIX)
          DO IY = 1, L%NY
             DO IX = 1, L%NX
    
-               IF (NO_VALID_CELL(IX, IY, IZ, NM, NL)) CYCLE
+               IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(IX, IY, IZ)/=NSCARC_CELL_GASPHASE) CYCLE
 
                IC = L%CELL_NUMBER(IX, IY, IZ)
                CALL SCARC_SETUP_MATRIX_MAINDIAG_CSR (IC, IX, IY, IZ, IP, NM, NL)
@@ -4379,7 +4367,7 @@ SELECT_STORAGE_TYPE: SELECT CASE (TYPE_MATRIX)
          DO IY = 1, L%NY
             DO IX = 1, L%NX
    
-               IF (NO_VALID_CELL(IX, IY, IZ, NM, NL)) CYCLE
+               IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(IX, IY, IZ)/=NSCARC_CELL_GASPHASE) CYCLE
 
                IC = L%CELL_NUMBER(IX, IY, IZ)
 
@@ -4993,7 +4981,7 @@ MATRIX_TYPE_SELECT: SELECT CASE (TYPE_MATRIX)
             J    = L%WALL(IW)%IYW
             K    = L%WALL(IW)%IZW
       
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE 
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
       
             NOM  = L%WALL(IW)%NOM
             L%WALL(IW)%ICW = L%CELL_NUMBER(I, J, K)
@@ -5034,7 +5022,7 @@ MATRIX_TYPE_SELECT: SELECT CASE (TYPE_MATRIX)
          J    = L%WALL(IW)%IYW
          K    = L%WALL(IW)%IZW
       
-         IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+         IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
       
          NOM  = L%WALL(IW)%NOM
          L%WALL(IW)%ICW = L%CELL_NUMBER(I, J, K)
@@ -5107,7 +5095,7 @@ MATRIX_TYPE_SELECT: SELECT CASE (TYPE_MATRIX)
          J    = L%WALL(IW)%IYW
          K    = L%WALL(IW)%IZW
       
-         IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+         IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
       
          NOM  = L%WALL(IW)%NOM
          L%WALL(IW)%ICW = L%CELL_NUMBER(I, J, K)
@@ -6615,7 +6603,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO K = 1, L%NZ
       DO J = 1, L%NY
          DO I = 1, L%NX
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
             IC = L%CELL_NUMBER(I,J,K)
             VC(IC) = VAL
          ENDDO
@@ -7464,15 +7452,15 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       HP => M%HS
    ENDIF
 
-    DO K = 1, S%KBAR
-       DO J = 1, S%JBAR
-          DO I = 1, S%IBAR
-             IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
-             IC = L%CELL_NUMBER(I,J,K)
-             HP(I, J, K) = SCO%X(IC)
-          ENDDO
-       ENDDO
-    ENDDO
+   DO K = 1, S%KBAR
+      DO J = 1, S%JBAR
+         DO I = 1, S%IBAR
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
+            IC = L%CELL_NUMBER(I,J,K)
+            HP(I, J, K) = SCO%X(IC)
+         ENDDO
+      ENDDO
+   ENDDO
 
    ! Get new FVX, FVY, FVZ:
    CALL BAROCLINIC_CORRECTION(T,NM)
@@ -7503,7 +7491,7 @@ DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
    DO K = 1, M%KBAR
       DO J = 1, M%JBAR
          DO I = 1, M%IBAR
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
             IC = L%CELL_NUMBER(I,J,K)
             SCO%B(IC) = PRHS(I, J, K)                 !> use right hand side from pres-routine
          ENDDO
@@ -7517,7 +7505,7 @@ DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
       K    = L%WALL(IW)%IZW
 
       IF (TWO_D .AND. J /= 1) CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
-      IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+      IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
 
       IOR0 = L%WALL(IW)%IOR
       IC   = L%CELL_NUMBER(I,J,K)
@@ -8453,7 +8441,7 @@ SELECT CASE (SOL%TYPE_SOLVER)
          DO K = 1, M%KBAR
             DO J = 1, M%JBAR
                DO I = 1, M%IBAR
-                  IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+                  IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
                   IC = L%CELL_NUMBER(I,J,K)
                   SCO%B(IC) = PRHS(I, J, K)                 !> use right hand side from pres-routine
                   SCO%X(IC) = HP(I, J, K)                   !> use last iterate as initial solution
@@ -8468,7 +8456,7 @@ SELECT CASE (SOL%TYPE_SOLVER)
             K = L%WALL(IW)%IZW
 
             IF (TWO_D .AND. J /= 1) CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_INDEX, SCARC_NONE, J)
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
 
             IOR0 = L%WALL(IW)%IOR
             IC   = L%CELL_NUMBER(I,J,K)
@@ -8743,7 +8731,7 @@ IF (BMULTILEVEL) THEN
                DO IZC = 1, NZC
                   DO IXC = 1, NXC
 
-                     IF (NO_VALID_CELL(IXC, 1, IZC, NM, NLC)) CYCLE
+                     IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. LC%CELL_STATE(IXC, 1, IZC)/=NSCARC_CELL_GASPHASE) CYCLE
 
                      IXF = 2*IXC
                      IZF = 2*IZC
@@ -8769,7 +8757,7 @@ IF (BMULTILEVEL) THEN
                DO IZC = 1, NZC
                   DO IXC = 1, NXC
 
-                     IF (NO_VALID_CELL(IXC, 1, IZC, NM, NLC)) CYCLE
+                     IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. LC%CELL_STATE(IXC, 1, IZC)/=NSCARC_CELL_GASPHASE) CYCLE
 
                      IXF = 2*IXC
                      IZF = 2*IZC
@@ -8856,7 +8844,7 @@ IF (BMULTILEVEL) THEN
             DO IYC = 1, NYC
                DO IXC = 1, NXC
 
-                  IF (NO_VALID_CELL(IXC, IYC, IZC, NM, NLC)) CYCLE
+                  IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. LC%CELL_STATE(IXC, 1, IZC)/=NSCARC_CELL_GASPHASE) CYCLE
 
                   IXF = 2*IXC
                   IYF = 2*IYC
@@ -8917,6 +8905,7 @@ IF (BMULTILEVEL) THEN
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
+         LC => POINT_TO_LEVEL(NM, NLC)
          LF => POINT_TO_LEVEL(NM, NLF)
 
          NXC => LC%NX
@@ -8939,7 +8928,7 @@ IF (BMULTILEVEL) THEN
                   DO IZC = 1, NZC
                      DO IXC = 1, NXC
 
-                        IF (NO_VALID_CELL(IXC, 1, IZC, NM, NLC)) CYCLE
+                        IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. LC%CELL_STATE(IXC, 1, IZC)/=NSCARC_CELL_GASPHASE) CYCLE
 
                         IXF = 2*IXC
                         IYF = 1
@@ -8963,7 +8952,7 @@ IF (BMULTILEVEL) THEN
                   DO IZC = 1, NZC
                      DO IXC = 1, NXC
 
-                        IF (NO_VALID_CELL(IXC, 1, IZC, NM, NLC)) CYCLE
+                        IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. LC%CELL_STATE(IXC, 1, IZC)/=NSCARC_CELL_GASPHASE) CYCLE
 
                         IXF = 2*IXC
                         IZF = 2*IZC
@@ -9033,7 +9022,7 @@ IF (BMULTILEVEL) THEN
                DO IYC = 1, NYC
                   DO IXC = 1, NXC
 
-                     IF (NO_VALID_CELL(IXC, IYC, IZC, NM, NLC)) CYCLE
+                     IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. LC%CELL_STATE(IXC, 1, IZC)/=NSCARC_CELL_GASPHASE) CYCLE
 
                      IXF = 2*IXC
                      IYF = 2*IYC
@@ -9104,7 +9093,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO K = 1, M%KBAR
       DO J = 1, M%JBAR
          DO I = 1, M%IBAR
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
             IC = L%CELL_NUMBER(I,J,K)
             HP(I, J, K) = SCO%X(IC)
          ENDDO
@@ -9519,7 +9508,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                !ZSUM = VECTOR(L%CELL_NUMBER(IX, IY, IZ))
                !OS%SEND_REAL(LL) = ZSUM/REAL(OL%NCPLR,EB)
 
-               IF (NO_VALID_CELL(IX, IY, IZ, NM, NL)) THEN
+               IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(IX, IY, IZ)/=NSCARC_CELL_GASPHASE) THEN
                   OS%SEND_REAL(LL) = NSCARC_HUGE_REAL
                ELSE
                   OS%SEND_REAL(LL) = VECTOR(L%CELL_NUMBER(IX, IY, IZ))
@@ -9547,7 +9536,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                IY  = L%WALL(IWG)%IYW
                IZ  = L%WALL(IWG)%IZW
 
-               IF (NO_VALID_CELL(IX, IY, IZ, NM, NL)) THEN
+               IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(IX, IY, IZ)/=NSCARC_CELL_GASPHASE) THEN
                   OS%SEND_INT(LL) = NSCARC_HUGE_INT
                ELSE
                   OS%SEND_INT(LL) = L%CELL_NUMBER(IX, IY, IZ)
@@ -9574,7 +9563,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                IY  = L%WALL(IWG)%IYW
                IZ  = L%WALL(IWG)%IZW
 
-               IF (NO_VALID_CELL(IX, IY, IZ, NM, NL)) THEN
+               IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(IX, IY, IZ)/=NSCARC_CELL_GASPHASE) THEN
                   OS%SEND_REAL(LL) = NSCARC_HUGE_REAL
                ELSE
                   IC = L%CELL_NUMBER(IX, IY, IZ)
@@ -10088,7 +10077,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO K = 1, L%NZ
       DO J = 1, L%NY
          DO I = 1, L%NX
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
             IC = L%CELL_NUMBER(I,J,K)
             LOCAL_REAL(NM) = LOCAL_REAL(NM) + VC(IC)
          ENDDO
@@ -10110,7 +10099,7 @@ DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
    DO K = 1, L%NZ
       DO J = 1, L%NY
          DO I = 1, L%NX
-            IF (NO_VALID_CELL(I, J, K, NM, NL)) CYCLE
+            IF (.NOT.PRES_ON_WHOLE_DOMAIN .AND. L%CELL_STATE(I, J, K)/=NSCARC_CELL_GASPHASE) CYCLE
             IC = L%CELL_NUMBER(I,J,K)
             VC(IC) = VC(IC) - GLOBAL_REAL
          ENDDO
