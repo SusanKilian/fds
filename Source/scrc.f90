@@ -4758,8 +4758,11 @@ ENDIF
 !> ------------------------------------------------------------------------------------------------
 !> allocate storage for symmetric matrix and its column and row pointers
 !> ------------------------------------------------------------------------------------------------
-
+AC_SYM%NC = AC_SYM%NA
+AC_SYM%NR = AC%NR
 CALL SCARC_ALLOCATE_MATRIX_CSR(AC_SYM, 'AC_SYM', NL, NSCARC_INIT_ZERO)
+
+!> if global MKL method is used, also allocate auxiliary space for computation of global numbering
 IF (BMKL_LEVEL(NL)) THEN
    CALL SCARC_ALLOCATE_INT1(KCOL_AUX, 1, AC%NSTENCIL, NSCARC_INIT_NONE, 'KCOL_AUX')
    CALL SCARC_ALLOCATE_INT1(KC_AUX  , 1, AC%NSTENCIL, NSCARC_INIT_NONE, 'KC_AUX')
@@ -4772,8 +4775,8 @@ IAS = 1
 DO IC = 1, L%NCS
    AC_SYM%ROW(IC) = IAS
 
-   !> blockwise use of MKL solver - no global numbering required
-   IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_LOCAL) THEN    !really neccesary ??
+   !> blockwise use of local MKL solvers - no global numbering required
+   IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_LOCAL) THEN    
 
       DO ICOL = AC%ROW(IC), AC%ROW(IC+1)-1
          JC = AC%COL(ICOL)
@@ -4839,7 +4842,6 @@ DO IC = 1, L%NCS
 ENDDO
 
 AC_SYM%ROW(L%NCS+1) = IAS
-AC_SYM%COL = AC_SYM%COL
 
 IF (BMKL_LEVEL(NL)) THEN
    DEALLOCATE (KCOL_AUX, STAT=IERROR)
@@ -5898,7 +5900,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       L      => POINT_TO_LEVEL(NM, NL)
       MKL    => POINT_TO_MKL(NM, NL)
-      AC_SYM => POINT_TO_MATRIX_CSR(NM, NL)
+      AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
 
       !> Allocate workspace for parameters needed in MKL-routine
       CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL_IPARM')
@@ -6009,7 +6011,7 @@ MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
       L      => POINT_TO_LEVEL(NM, NL)
       MKL    => POINT_TO_MKL(NM, NL)
-      AC_SYM => POINT_TO_MATRIX_CSR(NM, NL)
+      AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
 
       !> Allocate workspace for parameters needed in MKL-routine
       CALL SCARC_ALLOCATE_INT1(MKL%IPARM, 1, 64, NSCARC_INIT_ZERO, 'MKL_IPARM')
@@ -6273,7 +6275,6 @@ REAL (EB) :: TNOW
 TNOW = CURRENT_TIME()
 
 ITE_PRES = ITE_PRES + 1
-WRITE(*,*) 'IN SOLVER'
 
 SELECT_METHOD: SELECT CASE (TYPE_METHOD)
 
@@ -6846,8 +6847,9 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'C: FFT-PRECON 2', NL)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-         L   => POINT_TO_LEVEL(NM, NL)
-         MKL => POINT_TO_MKL(NM, NL)
+         L      => POINT_TO_LEVEL(NM, NL)
+         MKL    => POINT_TO_MKL(NM, NL)
+         AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
 
          MKL%PHASE  = 33                            ! only solving
 
@@ -6883,8 +6885,9 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'C: FFT-PRECON 2', NL)
 
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-         L   => POINT_TO_LEVEL(NM, NL)
-         MKL => POINT_TO_MKL(NM, NL)
+         L      => POINT_TO_LEVEL(NM, NL)
+         MKL    => POINT_TO_MKL(NM, NL)
+         AC_SYM => POINT_TO_MATRIX_CSR_SYM(NM, NL)
 
          MKL%PHASE  = 33                            ! only solving
 
@@ -6956,12 +6959,13 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   L   => POINT_TO_LEVEL(NM, NL)
+   L      => POINT_TO_LEVEL(NM, NL)
+   AC_SYM => POINT_TO_MATRIX_CSR_SYM(NL, NL)
 
-   V1  => POINT_TO_VECTOR (NM, NL, B)
-   V2  => POINT_TO_VECTOR (NM, NL, X)
+   V1     => POINT_TO_VECTOR (NM, NL, B)
+   V2     => POINT_TO_VECTOR (NM, NL, X)
 
-   MKL => POINT_TO_MKL(NL, NL)
+   MKL    => POINT_TO_MKL(NL, NL)
    MKL%PHASE  = 33                                !> only solving
 
 #ifdef WITH_MKL_FB
@@ -7032,12 +7036,13 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   L   => POINT_TO_LEVEL(NM, NL)
+   L      => POINT_TO_LEVEL(NM, NL)
+   AC_SYM => POINT_TO_MATRIX_CSR_SYM(NL, NL)
 
-   V1  => POINT_TO_VECTOR (NM, NL, B)
-   V2  => POINT_TO_VECTOR (NM, NL, X)
+   V1     => POINT_TO_VECTOR (NM, NL, B)
+   V2     => POINT_TO_VECTOR (NM, NL, X)
 
-   MKL => POINT_TO_MKL(NM, NL)
+   MKL    => POINT_TO_MKL(NM, NL)
    MKL%PHASE  = 33         ! only solving
 
 #ifdef WITH_MKL_FB
