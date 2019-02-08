@@ -1887,7 +1887,7 @@ SUBROUTINE SCARC_SETUP_INTERFACES
 INTEGER :: NM, NOM, NL
 TYPE (MESH_TYPE), POINTER :: M=>NULL(), OM=>NULL()
 TYPE (SCARC_NEIGHBOR_TYPE), POINTER :: OS=>NULL()
-TYPE (SCARC_LEVEL_TYPE), POINTER :: L=>NULL(), OLF=>NULL(), OLC=>NULL()
+TYPE (SCARC_LEVEL_TYPE), POINTER :: LF=>NULL(), LC=>NULL(), OLF=>NULL(), OLC=>NULL()
 
 !> Initialize communication counter for ScaRC, use same TAG for all communications
 TAG   = 99
@@ -1897,19 +1897,19 @@ N_EXCHANGE =  0
 !> Allocate basic WALL and FACE types on mesh NM for all requested grid levels
 MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
-   M => POINT_TO_MESH(NM)
-   L => POINT_TO_LEVEL(NM, NLEVEL_MIN)    !> point to finest level
+   M  => POINT_TO_MESH(NM)
+   LF => POINT_TO_LEVEL(NM, NLEVEL_MIN)    !> point to finest level
 
-   ALLOCATE(L%WALL(L%NW), STAT=IERROR)
+   ALLOCATE(LF%WALL(LF%NW), STAT=IERROR)
    CALL ChkMemErr('SCARC_SETUP_INTERFACES','WALL',IERROR)
 
-   ALLOCATE(L%FACE(-3:3), STAT=IERROR)
+   ALLOCATE(LF%FACE(-3:3), STAT=IERROR)
    CALL ChkMemErr('SCARC_SETUP_INTERFACES','FACE',IERROR)
 
    IF (NLEVEL_MAX > NLEVEL_MIN) THEN
       DO NL=NLEVEL_MIN+1,NLEVEL_MAX
-         L => POINT_TO_LEVEL(NM, NL)           !> Note: LC points to coarser level
-         ALLOCATE(L%FACE(-3:3), STAT=IERROR)
+         LC => POINT_TO_LEVEL(NM, NL)           !> Note: LC points to coarser level
+         ALLOCATE(LC%FACE(-3:3), STAT=IERROR)
          CALL ChkMemErr('SCARC_SETUP_INTERFACES','WALL',IERROR)
       ENDDO
    ENDIF
@@ -1939,7 +1939,8 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       CALL CHKMEMERR ('SCARC_SETUP_INTERFACES', 'OS%LEVEL', IERROR)
 
       OM  => POINT_TO_MESH(NOM)
-      OLF => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL)
+WRITE(*,*) 'POINTING OLF TO NM, NOM, NL:', NM, NOM, NLEVEL_MIN
+      OLF => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NLEVEL_MIN)
 
       OLF%NX = OM%IBAR                                    !> number of cells in x-direction on other mesh
       OLF%NY = OM%JBAR                                    !> number of cells in y-direction on other mesh
@@ -1967,8 +1968,9 @@ LEVEL_MESHES_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       !> In case of GMG with a predefined grid hierarchy allocate corresponding level-structures
       IF (NLEVEL_MAX > NLEVEL_MIN) THEN
 
-         DO NL=NLEVEL_MIN,NLEVEL_MAX-1
+         DO NL=NLEVEL_MIN+1,NLEVEL_MAX
 
+WRITE(*,*) 'POINTING OLC TO NM, NOM, NL:', NM, NOM, NL
             OLC => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL)         !> Note: OLF points to finer, OLC to coarser level
             
             OLC%NX = OLF%NX/2
@@ -2249,7 +2251,7 @@ MESHES_LOOP1: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          L%NCE = L%NCE + NCPL                           !> increase number of extended grid cells
          L%NCO = L%NCO + 1                              !> increase number of overlapping grid cells
 
-         OL => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL)
+         OL => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NLEVEL_MIN)
 
          OL%NCPL = NCPL                                 !> initialize own counter for local wall cells
          OL%IOR  = -IOR0                                !> initialize own orientation variable
@@ -2445,10 +2447,10 @@ MULTI_LEVEL_IF: IF (BMULTILEVEL) THEN
       S => POINT_TO_SCARC(NM)
 
       IREFINE=1
-      LEVEL_GMG_LEVEL_LOOP: DO NL = NLEVEL_MIN, NLEVEL_MAX-1
+      LEVEL_GMG_LEVEL_LOOP: DO NL = NLEVEL_MIN+1, NLEVEL_MAX
 
-         LF => POINT_TO_LEVEL(NM, NL)                 !> LF points to finer level
-         LC => POINT_TO_LEVEL(NM, NL+1)               !> LC points to coarser level
+         LF => POINT_TO_LEVEL(NM, NL-1)                 !> LF points to finer level
+         LC => POINT_TO_LEVEL(NM, NL)                   !> LC points to coarser level
 
          IREFINE=IREFINE*2
 
@@ -2486,8 +2488,8 @@ MULTI_LEVEL_IF: IF (BMULTILEVEL) THEN
 
                   NOM = LF%FACE(IOR0)%NEIGHBORS(INBR)
                   
-                  OLF => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL)
-                  OLC => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL+1)
+                  OLF => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL-1)
+                  OLC => POINT_TO_NEIGHBOR_LEVEL(NM, NOM, NL)
 
                   OLC%NCPL = OLF%NCPL
 
@@ -2509,12 +2511,12 @@ MULTI_LEVEL_IF: IF (BMULTILEVEL) THEN
             ENDIF
 
             !> setup complete face information for coarser mesh
-            CALL SCARC_SETUP_FACE(IOR0, IWC, IREFINE, NM, NL+1)
+            CALL SCARC_SETUP_FACE(IOR0, IWC, IREFINE, NM, NL)
 
          ENDDO
-         CALL SCARC_SETUP_CELL_INDEX(NM, NL+1)
-         CALL SCARC_SETUP_INTERNAL_WALL_COORDS(NM, NL+1)
-         CALL SCARC_SETUP_WALL_INDEX(NM, NL+1)
+         CALL SCARC_SETUP_CELL_INDEX(NM, NL)
+         CALL SCARC_SETUP_INTERNAL_WALL_COORDS(NM, NL)
+         CALL SCARC_SETUP_WALL_INDEX(NM, NL)
 
       ENDDO LEVEL_GMG_LEVEL_LOOP
    ENDDO MESHES_LOOP2
@@ -10873,7 +10875,7 @@ DO NM = 1, NMESHES
                   !   VALUES(II)=-999999.0_EB
                   !ENDIF
                ENDDO
-               WRITE(MSG%LU_DEBUG, '(12E16.8)') (VALUES(II), II=1, NX8)
+               WRITE(MSG%LU_DEBUG, '(12E12.4)') (VALUES(II), II=1, NX8)
             ENDDO
          ENDDO
    !ENDIF
