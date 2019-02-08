@@ -735,8 +735,11 @@ INTEGER, POINTER, DIMENSION (:,:,:)     :: CELL_INDEX_PTR   !> Pointer to CELL_I
 INTEGER, POINTER, DIMENSION (:,:)       :: WALL_INDEX_PTR   !> Pointer to WALL_INDEX
 
 !> Matrices in different storage techniques
-TYPE (SCARC_MATRIX_BANDED_TYPE) :: AB, AB_SYM               !> Poisson matrix, also only its symmetric part
-TYPE (SCARC_MATRIX_CSR_TYPE)    :: AC, AC_SYM               !> Poisson matrix, also only its symmetric part
+TYPE (SCARC_MATRIX_BANDED_TYPE) :: AB                       !> Poisson matrix, also only its symmetric part
+TYPE (SCARC_MATRIX_CSR_TYPE)    :: AC                       !> Poisson matrix, also only its symmetric part
+#ifdef WITH_MKL
+TYPE (SCARC_MATRIX_CSR_TYPE)    :: AC_SYM                   !> symmetric part of Poisson matrix (only for MKL)
+#endif
 
 !> Set scope for used working vectors
 TYPE (SCARC_SCOPE_TYPE), DIMENSION(2) :: SCOPE              !> scope information
@@ -4732,18 +4735,23 @@ IF (SCARC_MKL_MTYPE == 'SYMMETRIC') THEN
    ENDDO
 
    !> Compute number of entries in symmetric matrix
+   AC_SYM%NA = 0
    DO IC = 1, L%NCS
       DO ICOL = AC%ROW(IC), AC%ROW(IC+1)-1
          IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_LOCAL) THEN
             JC = AC%COL(ICOL)
+            IF (JC >= IC .AND. JC <= L%NCS) AC_SYM%NA = AC_SYM%NA+1  
          ELSE IF (TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) THEN
             JC = AC%COL_GLOBAL(ICOL)
+            IF (JC >= IC + L%NC_OFFSET(NM)) AC_SYM%NA = AC_SYM%NA+1
          ELSE
             CALL SCARC_SHUTDOWN(NSCARC_ERROR_MATRIX_SETUP, SCARC_NONE, TYPE_LU_LEVEL(NL))
          ENDIF
       ENDDO
    ENDDO
 
+ELSE
+   AC_SYM%NA = AC%NA
 ENDIF
 
 !> ------------------------------------------------------------------------------------------------
