@@ -238,7 +238,7 @@ INTEGER, PARAMETER :: NSCARC_DEBUG_NONE              =  0, &    !> info0  level 
                       NSCARC_DEBUG_WALLINFO          = 15, &    !> show WALLINFO
                       NSCARC_DEBUG_FACEINFO          = 16, &    !> show FACEINFO
                       NSCARC_DEBUG_BC_INDEX           = 17, &    !> show PRESSURE_BC_INDEX
-                      NSCARC_DEBUG_DISCRETIZATION    = 18, &    !> show discretization information
+                      NSCARC_DEBUG_GRIDINFO    = 18, &    !> show discretization information
                       NSCARC_DEBUG_SUBDIVISION       = 21, &    !> show SUBDIVISION
                       NSCARC_DEBUG_MEASURE           = 22, &    !> show MEASURE
                       NSCARC_DEBUG_COARSE            = 25, &    !> show coarse grid
@@ -1961,7 +1961,6 @@ WRITE(*,*) 'POINTING OLF TO NM, NOM, NL:', NM, NOM, NLEVEL_MIN
 
          DO NL=NLEVEL_MIN+1,NLEVEL_MAX
 
-WRITE(*,*) 'POINTING OLC TO NM, NOM, NL:', NM, NOM, NL
             OLC => SCARC(NM)%OSCARC(NOM)%LEVEL(NL)         !> Note: OLF points to finer, OLC to coarser level
             
             OLC%NX = OLF%NX/2
@@ -2474,8 +2473,8 @@ MULTI_LEVEL_IF: IF (BMULTILEVEL) THEN
             CALL SCARC_SETUP_FACE_DIMENSIONS(IOR0, IWG, NM, NL)
 
             !> for every neighbor do:
-            IF (FF%N_NEIGHBORS /= 0) THEN
-               DO INBR = 1, FF%N_NEIGHBORS
+            IF (LF%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
+               DO INBR = 1, LF%FACE(IOR0)%N_NEIGHBORS
 
                   NOM = LF%FACE(IOR0)%NEIGHBORS(INBR)
                   
@@ -2517,7 +2516,7 @@ ENDIF MULTI_LEVEL_IF
 !> Debug WALL and FACE structures - only if directive SCARC_DEBUG is set
 !> -------------------------------------------------------------------------------------------
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_QUANTITY (NSCARC_DEBUG_DISCRETIZATION, NLEVEL_MIN, 'DISCRET')
+CALL SCARC_DEBUG_QUANTITY (NSCARC_DEBUG_GRIDINFO, NLEVEL_MIN, 'DISCRET')
 CALL SCARC_DEBUG_QUANTITY (NSCARC_DEBUG_WALLINFO, NLEVEL_MIN, 'WALL')
 CALL SCARC_DEBUG_QUANTITY (NSCARC_DEBUG_FACEINFO, NLEVEL_MIN, 'FACE')
 #endif
@@ -2549,15 +2548,19 @@ TYPE(MESH_TYPE), POINTER :: M=>NULL()
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 TYPE(SCARC_OBST_TYPE), POINTER :: OB=>NULL()
 
-WRITE(*,*) 'TOFIX: Check NL level'
 M => MESHES(NM)
 L => SCARC(NM)%LEVEL(NL)
 
+!> if finest level, the corresponding CELL_INDEX array is already available by surrounding routines
 IF (NL == NLEVEL_MIN) THEN
-   L%CELL_INDEX_PTR => M%CELL_INDEX
+   L%CELL_INDEX_PTR => M%CELL_INDEX              
+
+!> on coarser levels, it must still be computed
 ELSE
 
    CALL SCARC_ALLOCATE_INT3(L%CELL_INDEX, 0, L%NX+1, 0, L%NY+1, 0, L%NZ+1, NSCARC_INIT_ZERO, 'CELL_INDEX')
+   L%CELL_INDEX_PTR => L%CELL_INDEX              
+
    L%N_CELLS = 0
    
    !>
@@ -2646,15 +2649,19 @@ INTEGER:: I, J, K, ICG, IW, IOR0
 TYPE(MESH_TYPE), POINTER :: M=>NULL()
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 
-WRITE(*,*) 'TOFIX: Check NL level'
 M => MESHES(NM)
 L => SCARC(NM)%LEVEL(NL)
 
+!> if on finest level, the array WALL_INDEX is already available by surrounding routines
 IF (NL == NLEVEL_MIN) THEN
+
    L%WALL_INDEX_PTR => M%WALL_INDEX
+
+!> if on coarser levels, it must still be computed
 ELSE
 
    CALL SCARC_ALLOCATE_INT2(L%WALL_INDEX, 1, L%N_CELLS, -3, 3, NSCARC_INIT_ZERO, 'WALL_INDEX')
+   L%WALL_INDEX_PTR => L%WALL_INDEX
    
    DO IW = 1, L%NW
    
@@ -2668,7 +2675,6 @@ ELSE
       L%WALL_INDEX(ICG,-IOR0) = IW
    
    ENDDO
-   L%WALL_INDEX_PTR => L%WALL_INDEX
 
 ENDIF
 
@@ -2688,7 +2694,6 @@ INTEGER :: I, J, K
 TYPE(SCARC_LEVEL_TYPE), POINTER :: LC=>NULL()
 TYPE(SCARC_OBST_TYPE), POINTER :: OB=>NULL()
 
-WRITE(*,*) 'TOFIX: Check NL level'
 LC => SCARC(NM)%LEVEL(NL)
 
 IWC = LC%N_WALL_CELLS_EXT + 1
@@ -2826,7 +2831,6 @@ INTEGER :: IWG
 INTEGER :: IX, IY, IZ, IOR0, BTYPE0
 TYPE(SCARC_LEVEL_TYPE), POINTER :: L=>NULL()
 
-WRITE(*,*) 'TOFIX: Check NL level'
 L => SCARC(NM)%LEVEL(NL)
 
 DO IWG = 1, L%N_WALL_CELLS_EXT
@@ -2860,12 +2864,15 @@ INTEGER FUNCTION SCARC_COUNT_EXTERNAL_WALL_CELLS(NM, NL)
 INTEGER, INTENT(IN) :: NM, NL
 INTEGER :: IXC, IYC, IZC
 INTEGER :: IXF, IYF, IZF
+INTEGER :: NLF, NLC
 INTEGER :: IWC, ICF(4)=0, IWF(4)=0, IOR0
 TYPE(SCARC_LEVEL_TYPE), POINTER :: LF=>NULL(), LC=>NULL()
 
-WRITE(*,*) 'TOFIX: Check NL level'
-LF => SCARC(NM)%LEVEL(NL)
-LC => SCARC(NM)%LEVEL(NL+1)
+NLF = NL-1
+NLC = NL
+
+LF => SCARC(NM)%LEVEL(NLF)
+LC => SCARC(NM)%LEVEL(NLC)
 
 ICF = 0
 IWC = 0
@@ -2881,7 +2888,7 @@ IF (TWO_D) THEN
       IZF = 2*IZC - 1
       ICF(1) = LF%CELL_INDEX_PTR(1  , IYF  , IZF  )
       ICF(2) = LF%CELL_INDEX_PTR(1  , IYF  , IZF+1)
-      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NL)) IWC = IWC + 1
+      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NLF)) IWC = IWC + 1
    ENDDO
 
    !> IOR = -1
@@ -2890,7 +2897,7 @@ IF (TWO_D) THEN
       IZF = 2*IZC - 1
       ICF(1) = LF%CELL_INDEX_PTR(LF%NX, IYF  , IZF  )
       ICF(2) = LF%CELL_INDEX_PTR(LF%NX, IYF  , IZF+1)
-      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NL)) IWC = IWC + 1
+      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NLF)) IWC = IWC + 1
    ENDDO
 
    !> IOR = 2
@@ -2903,7 +2910,7 @@ IF (TWO_D) THEN
          ICF(2) = LF%CELL_INDEX_PTR(IXF+1, IYF, IZF  )
          ICF(3) = LF%CELL_INDEX_PTR(IXF  , IYF, IZF+1)
          ICF(4) = LF%CELL_INDEX_PTR(IXF+1, IYF, IZF+1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -2918,7 +2925,7 @@ IF (TWO_D) THEN
          ICF(2) = LF%CELL_INDEX_PTR(IXF+1  , IYF, IZF  )
          ICF(3) = LF%CELL_INDEX_PTR(IXF    , IYF, IZF+1)
          ICF(4) = LF%CELL_INDEX_PTR(IXF+1  , IYF, IZF+1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -2928,7 +2935,7 @@ IF (TWO_D) THEN
       IXF = 2*IXC - 1
       ICF(1) = LF%CELL_INDEX_PTR(IXF    , IYF  , 1)
       ICF(2) = LF%CELL_INDEX_PTR(IXF+1  , IYF  , 1)
-      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NL)) IWC = IWC + 1
+      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NLF)) IWC = IWC + 1
    ENDDO
 
    !> IOR = -3
@@ -2937,7 +2944,7 @@ IF (TWO_D) THEN
       IXF = 2*IXC - 1
       ICF(1) = LF%CELL_INDEX_PTR(IXF  , IYF  , LF%NZ)
       ICF(2) = LF%CELL_INDEX_PTR(IXF+1, IYF  , LF%NZ)
-      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NL)) IWC = IWC + 1
+      IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 2, NM, NLF)) IWC = IWC + 1
    ENDDO
 
 ELSE
@@ -2952,7 +2959,7 @@ ELSE
          ICF(2) = LF%CELL_INDEX_PTR(1  , IYF+1, IZF  )
          ICF(3) = LF%CELL_INDEX_PTR(1  , IYF  , IZF+1)
          ICF(4) = LF%CELL_INDEX_PTR(1  , IYF+1, IZF+1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -2966,7 +2973,7 @@ ELSE
          ICF(2) = LF%CELL_INDEX_PTR(LF%NX, IYF+1, IZF  )
          ICF(3) = LF%CELL_INDEX_PTR(LF%NX, IYF  , IZF+1)
          ICF(4) = LF%CELL_INDEX_PTR(LF%NX, IYF+1, IZF+1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -2980,7 +2987,7 @@ ELSE
          ICF(2) = LF%CELL_INDEX_PTR(IXF+1, 1, IZF  )
          ICF(3) = LF%CELL_INDEX_PTR(IXF  , 1, IZF+1)
          ICF(4) = LF%CELL_INDEX_PTR(IXF+1, 1, IZF+1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -2995,7 +3002,7 @@ ELSE
          ICF(2) = LF%CELL_INDEX_PTR(IXF+1  , LF%NY, IZF  )
          ICF(3) = LF%CELL_INDEX_PTR(IXF    , LF%NY, IZF+1)
          ICF(4) = LF%CELL_INDEX_PTR(IXF+1  , LF%NY, IZF+1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -3009,7 +3016,7 @@ ELSE
          ICF(2) = LF%CELL_INDEX_PTR(IXF+1  , IYF  , 1)
          ICF(3) = LF%CELL_INDEX_PTR(IXF    , IYF+1, 1)
          ICF(4) = LF%CELL_INDEX_PTR(IXF+1  , IYF+1, 1)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -3023,7 +3030,7 @@ ELSE
          ICF(2) = LF%CELL_INDEX_PTR(IXF+1, IYF  , LF%NZ)
          ICF(3) = LF%CELL_INDEX_PTR(IXF  , IYF+1, LF%NZ)
          ICF(4) = LF%CELL_INDEX_PTR(IXF+1, IYF+1, LF%NZ)
-         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NL)) IWC = IWC + 1
+         IF (IS_EXTERNAL_WALLCELL(IOR0, ICF, 4, NM, NLF)) IWC = IWC + 1
       ENDDO
    ENDDO
 
@@ -3043,9 +3050,8 @@ INTEGER :: I, J, K
 TYPE(SCARC_LEVEL_TYPE), POINTER :: LF=>NULL(), LC=>NULL()
 TYPE(SCARC_OBST_TYPE), POINTER :: OB=>NULL()
 
-WRITE(*,*) 'TOFIX check NL level'
-LC => SCARC(NM)%LEVEL(NL+1)
-LF => SCARC(NM)%LEVEL(NL)
+LC => SCARC(NM)%LEVEL(NL)
+LF => SCARC(NM)%LEVEL(NL-1)
 
 LC%N_OBST = LF%N_OBST                   !> Number of obstructions is the same on all levels
 
@@ -3347,12 +3353,11 @@ TYPE(SCARC_LEVEL_TYPE), POINTER :: LF=>NULL(), LC=>NULL()
 TYPE(SCARC_FACE_TYPE), POINTER :: FF=>NULL(), FC=>NULL()
 
 !> reference coarse and fine LEVEL type
-WRITE(*,*) 'TOFIX check NL level'
-LF => SCARC(NM)%LEVEL(NL)
-LC => SCARC(NM)%LEVEL(NL+1)
+LF => SCARC(NM)%LEVEL(NL-1)
+LC => SCARC(NM)%LEVEL(NL)
 
-FF => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
-FC => SCARC(NM)%LEVEL(NL+1)%FACE(IOR0)
+FF => SCARC(NM)%LEVEL(NL-1)%FACE(IOR0)
+FC => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
 
 !> initialize FACE type for coarser mesh
 FC%IWG_PTR = IWG
@@ -3376,7 +3381,7 @@ SELECT CASE (ABS(IOR0))
       ENDIF
       CALL SCARC_CHECK_DIVISIBILITY(FF%NFZ, 'Z')              !> number of z-cells divisible by 2?
       FC%NFZ = FF%NFZ/2
-      FC%NFC = LC%NX                                           !> number of cells between opposite faces
+      FC%NFC = LC%NX                                          !> number of cells between opposite faces
    CASE (2)
       FC%DH => LC%DYL
       CALL SCARC_CHECK_DIVISIBILITY(FF%NFX, 'X')              !> number of x-cells divisible by 2?
@@ -3384,7 +3389,7 @@ SELECT CASE (ABS(IOR0))
       FC%NFY = 1                                              !> no extension in y-direction
       CALL SCARC_CHECK_DIVISIBILITY(FF%NFZ, 'Z')              !> number of z-cells divisible by 2?
       FC%NFZ = FF%NFZ/2
-      FC%NFC = LC%NY                                           !> number of cells between opposite faces
+      FC%NFC = LC%NY                                          !> number of cells between opposite faces
    CASE (3)
       FC%DH => LC%DZL
       CALL SCARC_CHECK_DIVISIBILITY(FF%NFX, 'X')              !> number of x-cells divisible by 2?
@@ -3396,7 +3401,7 @@ SELECT CASE (ABS(IOR0))
          FC%NFY = FF%NFY
       ENDIF
       FC%NFZ = 1                                              !> no extension in y-direction
-      FC%NFC = LC%NZ                                           !> number of cells between opposite faces
+      FC%NFC = LC%NZ                                          !> number of cells between opposite faces
 END SELECT
 
 FC%NFW = FC%NFX * FC%NFY * FC%NFZ                             !> get number of wall cells for that face
@@ -3414,7 +3419,7 @@ INTEGER, INTENT(IN) :: NM, NL
 INTEGER, INTENT(IN) :: IOR0, IREFINE
 INTEGER :: IWF(4) , IBCF(4), NOMF(4)
 INTEGER :: NCPL
-INTEGER :: IX,  IY,  IZ
+INTEGER :: IX,  IY,  IZ, I
 INTEGER :: NX1, NY1, NZ1
 INTEGER :: NX2, NY2, NZ2
 INTEGER :: IX1, IY1, IZ1
@@ -3422,13 +3427,19 @@ INTEGER :: IX2, IY2, IZ2
 INTEGER :: IDIFF, JDIFF, KDIFF
 TYPE(SCARC_LEVEL_TYPE), POINTER :: LF=>NULL(), LC=>NULL(), OLC=>NULL()
 TYPE(SCARC_FACE_TYPE), POINTER :: FF=>NULL(), FC=>NULL()
-TYPE (SCARC_WALL_TYPE), POINTER :: WC=>NULL(), WF1=>NULL(), WF2=>NULL(), WF3=>NULL(), WF4=>NULL()
+TYPE(SCARC_WALL_TYPE), POINTER, DIMENSION(:) :: WC=>NULL(), WF=>NULL()
 
-LC  => SCARC(NM)%LEVEL(NL+1)
-LF  => SCARC(NM)%LEVEL(NL)
+!> reference coarse and fine LEVEL type
+LC => SCARC(NM)%LEVEL(NL)
+LF => SCARC(NM)%LEVEL(NL-1)
 
-FC => SCARC(NM)%LEVEL(NL+1)%FACE(IOR0)
-FF => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
+!> reference coarse and fine WALL type
+WC => SCARC(NM)%LEVEL(NL)%WALL
+WF => SCARC(NM)%LEVEL(NL-1)%WALL
+
+!> reference coarse and fine FACE type
+FC => SCARC(NM)%LEVEL(NL)%FACE(IOR0)
+FF => SCARC(NM)%LEVEL(NL-1)%FACE(IOR0)
 
 !> set coordinate dimensions for correspoding face
 SELECT CASE (ABS(IOR0))
@@ -3478,54 +3489,54 @@ DO IZ = NZ1, NZ2
       DO IX = NX1, NX2
 
          !> Set orientation of neiboring face, indices of ghost and adjacent cell for coarse IW
-         WC => SCARC(NM)%LEVEL(NL+1)%WALL(IWC)
+         WC(IWC)%IOR = IOR0
 
          SELECT CASE (IOR0)
             CASE (1)
-               WC%ICW = (IZ-1)*LC%NX*LC%NY + (IY-1)*LC%NX + IX + 1
+               WC(IWC)%ICW = (IZ-1)*LC%NX*LC%NY + (IY-1)*LC%NX + IX + 1
             CASE (-1)
-               WC%ICW = (IZ-1)*LC%NX*LC%NY + (IY-1)*LC%NX + IX - 1
+               WC(IWC)%ICW = (IZ-1)*LC%NX*LC%NY + (IY-1)*LC%NX + IX - 1
             CASE (2)
-               WC%ICW = (IZ-1)*LC%NX*LC%NY +  IY   *LC%NX + IX
+               WC(IWC)%ICW = (IZ-1)*LC%NX*LC%NY +  IY   *LC%NX + IX
             CASE (-2)
-               WC%ICW = (IZ-1)*LC%NX*LC%NY + (IY-2)*LC%NX + IX
+               WC(IWC)%ICW = (IZ-1)*LC%NX*LC%NY + (IY-2)*LC%NX + IX
             CASE (3)
-               WC%ICW =  IZ   *LC%NX*LC%NY + (IY-1)*LC%NX + IX
+               WC(IWC)%ICW =  IZ   *LC%NX*LC%NY + (IY-1)*LC%NX + IX
             CASE (-3)
-               WC%ICW = (IZ-2)*LC%NX*LC%NY + (IY-1)*LC%NX + IX
+               WC(IWC)%ICW = (IZ-2)*LC%NX*LC%NY + (IY-1)*LC%NX + IX
          END SELECT
 
-         WC%IOR = IOR0
+         WC(IWC)%IOR = IOR0
 
-         WC%IXG = IX
-         WC%IYG = IY
-         WC%IZG = IZ
+         WC(IWC)%IXG = IX
+         WC(IWC)%IYG = IY
+         WC(IWC)%IZG = IZ
 
          SELECT CASE (IOR0)
             CASE (1)
-               WC%IXW = IX+1
-               WC%IYW = IY
-               WC%IZW = IZ
+               WC(IWC)%IXW = IX+1
+               WC(IWC)%IYW = IY
+               WC(IWC)%IZW = IZ
             CASE (-1)
-               WC%IXW = IX-1
-               WC%IYW = IY
-               WC%IZW = IZ
+               WC(IWC)%IXW = IX-1
+               WC(IWC)%IYW = IY
+               WC(IWC)%IZW = IZ
             CASE (2)
-               WC%IXW = IX
-               WC%IYW = IY+1
-               WC%IZW = IZ
+               WC(IWC)%IXW = IX
+               WC(IWC)%IYW = IY+1
+               WC(IWC)%IZW = IZ
             CASE (-2)
-               WC%IXW = IX
-               WC%IYW = IY-1
-               WC%IZW = IZ
+               WC(IWC)%IXW = IX
+               WC(IWC)%IYW = IY-1
+               WC(IWC)%IZW = IZ
             CASE (3)
-               WC%IXW = IX
-               WC%IYW = IY
-               WC%IZW = IZ+1
+               WC(IWC)%IXW = IX
+               WC(IWC)%IYW = IY
+               WC(IWC)%IZW = IZ+1
             CASE (-3)
-               WC%IXW = IX
-               WC%IYW = IY
-               WC%IZW = IZ-1
+               WC(IWC)%IXW = IX
+               WC(IWC)%IYW = IY
+               WC(IWC)%IZW = IZ-1
          END SELECT
 
          !> ------------------------------------------------------------
@@ -3544,40 +3555,37 @@ DO IZ = NZ1, NZ2
             END SELECT
             IWF(2) = IWF(1)+1
 
-            WF1 => SCARC(NM)%LEVEL(NL)%WALL(IWF(1))
-            WF2 => SCARC(NM)%LEVEL(NL)%WALL(IWF(2))
-
             !> set fine cell neighbors (they must be the same for all fine IW's)
-            NOMF(1) = WF1%NOM
-            NOMF(2) = WF2%NOM
+            NOMF(1) = WF(IWF(1))%NOM
+            NOMF(2) = WF(IWF(2))%NOM
             IF (NOMF(1) /= NOMF(2)) CALL SCARC_SHUTDOWN(NSCARC_ERROR_NEIGHBOR_TYPE, SCARC_NONE, NOMF(1))
 
-            WC%NOM = NOMF(1)
+            WC(IWC)%NOM = NOMF(1)
 
             !> set corresponding pressure_bc_index on coarser level
-            IBCF(1) = WF1%BTYPE
-            IBCF(2) = WF2%BTYPE
+            IBCF(1) = WF(IWF(1))%BTYPE
+            IBCF(2) = WF(IWF(2))%BTYPE
             IF (IBCF(1) == INTERNAL .OR. IBCF(2) == INTERNAL) THEN
-               WC%BTYPE = INTERNAL
+               WC(IWC)%BTYPE = INTERNAL
             ELSE IF (IBCF(1) == DIRICHLET .OR. IBCF(2) == DIRICHLET) THEN
-               WC%BTYPE = DIRICHLET
+               WC(IWC)%BTYPE = DIRICHLET
             ELSE
-               WC%BTYPE = NEUMANN
+               WC(IWC)%BTYPE = NEUMANN
             ENDIF
 
             !> set corresponding pressure_bc_index on coarser level
-            IBCF(1) = WF1%BOUNDARY_TYPE
-            IBCF(2) = WF2%BOUNDARY_TYPE
+            IBCF(1) = WF(IWF(1))%BOUNDARY_TYPE
+            IBCF(2) = WF(IWF(2))%BOUNDARY_TYPE
             IF (IBCF(1)==NULL_BOUNDARY .OR. IBCF(2)==NULL_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = NULL_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = NULL_BOUNDARY
             ELSE IF (IBCF(1)==SOLID_BOUNDARY .OR. IBCF(2)==SOLID_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = SOLID_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = SOLID_BOUNDARY
             ELSE IF (IBCF(1)==OPEN_BOUNDARY .OR. IBCF(2)==OPEN_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = OPEN_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = OPEN_BOUNDARY
             ELSE IF (IBCF(1)==INTERPOLATED_BOUNDARY .OR. IBCF(2)==INTERPOLATED_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = INTERPOLATED_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = INTERPOLATED_BOUNDARY
             ELSE IF (IBCF(1)==MIRROR_BOUNDARY .OR. IBCF(2)==MIRROR_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = MIRROR_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = MIRROR_BOUNDARY
             ELSE
                CALL SCARC_SHUTDOWN(NSCARC_ERROR_BOUNDARY_TYPE, SCARC_NONE, IBCF(1))
             ENDIF
@@ -3585,36 +3593,35 @@ DO IZ = NZ1, NZ2
             !> in case of an internal boundary set neighboring WALL cells
             IF (NOMF(1) > 0) THEN
 
-               WRITE(*,*) 'TOFIX check NL level'
                OLC => SCARC(NM)%OSCARC(NOMF(1))%LEVEL(NL)
 
                IY1 = 1
                IY2 = 1
                SELECT CASE (ABS(IOR0))
                   CASE (1)
-                     KDIFF = WF2%IZN(1) - WF1%IZN(1)
+                     KDIFF = WF(IWF(2))%IZN(1) - WF(IWF(1))%IZN(1)
                      IF (KDIFF == 1) THEN
-                        IZ1 = WF2%IZN(2)/2
+                        IZ1 = WF(IWF(2))%IZN(2)/2
                         IZ2 = IZ1
                      ELSE IF (KDIFF == 2) THEN
-                        IZ1 = WF1%IZN(2)/2
-                        IZ2 = WF2%IZN(2)/2
+                        IZ1 = WF(IWF(1))%IZN(2)/2
+                        IZ2 = WF(IWF(2))%IZN(2)/2
                      ELSE IF (KDIFF == 0) THEN
-                        IZ1 = (WF1%IZN(2)+1)/2
+                        IZ1 = (WF(IWF(1))%IZN(2)+1)/2
                         IZ2 = IZ1
                      ELSE
                         CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_RESOLUTION, SCARC_NONE, IOR0)
                      ENDIF
                   CASE (3)
-                     IDIFF = WF2%IXN(1) - WF1%IXN(1)
+                     IDIFF = WF(IWF(2))%IXN(1) - WF(IWF(1))%IXN(1)
                      IF (IDIFF == 1) THEN
-                        IX1 = WF2%IXN(2)/2
+                        IX1 = WF(IWF(2))%IXN(2)/2
                         IX2 = IX1
                      ELSE IF (IDIFF == 2) THEN
-                        IX1 = WF1%IXN(2)/2
-                        IX2 = WF2%IXN(2)/2
+                        IX1 = WF(IWF(1))%IXN(2)/2
+                        IX2 = WF(IWF(2))%IXN(2)/2
                      ELSE IF (IDIFF == 0) THEN
-                        IX1 = (WF1%IXN(2)+1)/2
+                        IX1 = (WF(IWF(1))%IXN(2)+1)/2
                         IX2 = IX1
                      ELSE
                         CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_RESOLUTION, SCARC_NONE, IOR0)
@@ -3636,12 +3643,12 @@ DO IZ = NZ1, NZ2
                      IZ2 = 1
                END SELECT
 
-               WC%IXN(1) = IX1
-               WC%IYN(1) = 1
-               WC%IZN(1) = IZ1
-               WC%IXN(2) = IX2
-               WC%IYN(2) = 1
-               WC%IZN(2) = IZ2
+               WC(IWC)%IXN(1) = IX1
+               WC(IWC)%IYN(1) = 1
+               WC(IWC)%IZN(1) = IZ1
+               WC(IWC)%IXN(2) = IX2
+               WC(IWC)%IYN(2) = 1
+               WC(IWC)%IZN(2) = IZ2
 
                !>!
                !> Allocate and specify ICN and ICE arrays for OC
@@ -3675,127 +3682,116 @@ DO IZ = NZ1, NZ2
             IWF(4) = IWF(3)+1
 
             !> set fine cell neighbors (they must be the same for all fine IW's)
-            WF1 => SCARC(NM)%LEVEL(NL)%WALL(IWF(1))
-            WF2 => SCARC(NM)%LEVEL(NL)%WALL(IWF(2))
-            WF3 => SCARC(NM)%LEVEL(NL)%WALL(IWF(3))
-            WF4 => SCARC(NM)%LEVEL(NL)%WALL(IWF(4))
-
-            NOMF(1) = WF1%NOM
-            NOMF(2) = WF2%NOM
-            NOMF(3) = WF3%NOM
-            NOMF(4) = WF4%NOM
+            DO I=1,4
+               NOMF(I) = WF(IWF(I))%NOM
+            ENDDO
 
             IF (NOMF(1)/=NOMF(2) .OR. NOMF(1)/=NOMF(3) .OR. NOMF(1)/=NOMF(4)) &
                CALL SCARC_SHUTDOWN(NSCARC_ERROR_NEIGHBOR_TYPE, SCARC_NONE, IOR0)
-            WC%NOM = NOMF(1)
+            WC(IWC)%NOM = NOMF(1)
 
             !> set corresponding pressure_bc_index on coarser level
-            IBCF(1) = WF1%BTYPE
-            IBCF(2) = WF2%BTYPE
-            IBCF(3) = WF3%BTYPE
-            IBCF(4) = WF4%BTYPE
-
+            DO I=1,4
+               IBCF(I) = WF(IWF(I))%BTYPE
+            ENDDO
             IF (IBCF(1)==INTERNAL.OR.IBCF(2)==INTERNAL.OR.&
                 IBCF(3)==INTERNAL.OR.IBCF(4)==INTERNAL) THEN
-               WC%BTYPE =INTERNAL
+               WC(IWC)%BTYPE =INTERNAL
             ELSE IF (IBCF(1)==DIRICHLET.OR.IBCF(2)==DIRICHLET.OR.&
                      IBCF(3)==DIRICHLET.OR.IBCF(4)==DIRICHLET) THEN
-               WC%BTYPE =DIRICHLET
+               WC(IWC)%BTYPE =DIRICHLET
             ELSE
-               WC%BTYPE =NEUMANN
+               WC(IWC)%BTYPE =NEUMANN
             ENDIF
 
             !> set corresponding pressure_bc_index on coarser level
-            IBCF(1) = WF1%BOUNDARY_TYPE
-            IBCF(2) = WF2%BOUNDARY_TYPE
-            IBCF(3) = WF3%BOUNDARY_TYPE
-            IBCF(4) = WF4%BOUNDARY_TYPE
-
+            DO I=1,4
+               IBCF(I) = WF(IWF(I))%BOUNDARY_TYPE
+            ENDDO
             IF (IBCF(1)==NULL_BOUNDARY.OR.IBCF(2)==NULL_BOUNDARY.OR.&
                 IBCF(3)==NULL_BOUNDARY.OR.IBCF(4)==NULL_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = NULL_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = NULL_BOUNDARY
             ELSE IF (IBCF(1)==SOLID_BOUNDARY.OR.IBCF(2)==SOLID_BOUNDARY.OR.&
                      IBCF(3)==SOLID_BOUNDARY.OR.IBCF(4)==SOLID_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = SOLID_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = SOLID_BOUNDARY
             ELSE IF (IBCF(1)==OPEN_BOUNDARY.OR.IBCF(2)==OPEN_BOUNDARY.OR.&
                      IBCF(3)==OPEN_BOUNDARY.OR.IBCF(4)==OPEN_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = OPEN_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = OPEN_BOUNDARY
             ELSE IF (IBCF(1)==INTERPOLATED_BOUNDARY.OR.IBCF(2)==INTERPOLATED_BOUNDARY.OR.&
                      IBCF(3)==INTERPOLATED_BOUNDARY.OR.IBCF(4)==INTERPOLATED_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = INTERPOLATED_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = INTERPOLATED_BOUNDARY
             ELSE IF (IBCF(1)==MIRROR_BOUNDARY.OR.IBCF(2)==MIRROR_BOUNDARY.OR.&
                      IBCF(3)==MIRROR_BOUNDARY.OR.IBCF(4)==MIRROR_BOUNDARY) THEN
-               WC%BOUNDARY_TYPE = MIRROR_BOUNDARY
+               WC(IWC)%BOUNDARY_TYPE = MIRROR_BOUNDARY
             ELSE
-               CALL SCARC_SHUTDOWN(NSCARC_ERROR_BOUNDARY_TYPE, SCARC_NONE, NSCARC_NONE)
+               CALL SCARC_SHUTDOWN(NSCARC_ERROR_BOUNDARY_TYPE, SCARC_NONE, -999)
             ENDIF
 
             !> in case of an internal boundary set WALL(10:15,IWC)
             IF (NOMF(1) > 0) THEN
 
-               WRITE(*,*) 'TOFIX check NL level'
                OLC => SCARC(NM)%OSCARC(NOMF(1))%LEVEL(NL)
 
                SELECT CASE (ABS(IOR0))
                   CASE (1)
-                     JDIFF = WF2%IYN(1) - WF1%IYN(1)
-                     KDIFF = WF3%IZN(1) - WF1%IZN(1)
+                     JDIFF = WF(IWF(2))%IYN(1) - WF(IWF(1))%IYN(1)
+                     KDIFF = WF(IWF(3))%IZN(1) - WF(IWF(1))%IZN(1)
                      IF (JDIFF==1 .AND. KDIFF==1) THEN
-                        IY1 = WF2%IYN(2)/2
+                        IY1 = WF(IWF(2))%IYN(2)/2
                         IY2 = IY1
-                        IZ1 = WF3%IZN(2)/2
+                        IZ1 = WF(IWF(3))%IZN(2)/2
                         IZ2 = IZ1
                      ELSE IF (JDIFF==2 .AND. KDIFF==2) THEN
-                        IY1 = WF1%IYN(2)/2
-                        IY2 = WF2%IYN(2)/2
-                        IZ1 = WF1%IZN(2)/2
-                        IZ2 = WF3%IZN(2)/2
+                        IY1 = WF(IWF(1))%IYN(2)/2
+                        IY2 = WF(IWF(2))%IYN(2)/2
+                        IZ1 = WF(IWF(1))%IZN(2)/2
+                        IZ2 = WF(IWF(3))%IZN(2)/2
                      ELSE IF (JDIFF==0 .AND. KDIFF==0) THEN
-                        IY1 = WF1%IYN(1)/2
+                        IY1 = WF(IWF(1))%IYN(1)/2
                         IY2 = IY1
-                        IZ1 = WF1%IZN(1)/2
+                        IZ1 = WF(IWF(1))%IZN(1)/2
                         IZ2 = IZ1
                      ELSE
                         CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_RESOLUTION, SCARC_NONE, IOR0)
                      ENDIF
                   CASE (2)
-                     IDIFF = WF2%IXN(1) - WF1%IXN(1)
-                     KDIFF = WF3%IZN(1) - WF1%IZN(1)
+                     IDIFF = WF(IWF(2))%IXN(1) - WF(IWF(1))%IXN(1)
+                     KDIFF = WF(IWF(3))%IZN(1) - WF(IWF(1))%IZN(1)
                      IF (IDIFF==1 .AND. KDIFF==1) THEN
-                        IX1 = WF2%IXN(2)/2
+                        IX1 = WF(IWF(2))%IXN(2)/2
                         IX2 = IX1
-                        IZ1 = WF3%IZN(2)/2
+                        IZ1 = WF(IWF(3))%IZN(2)/2
                         IZ2 = IZ1
                      ELSE IF (IDIFF==2 .AND. KDIFF==2) THEN
-                        IX1 = WF1%IXN(2)/2
-                        IX2 = WF2%IXN(2)/2
-                        IZ1 = WF1%IZN(2)/2
-                        IZ2 = WF3%IZN(2)/2
+                        IX1 = WF(IWF(1))%IXN(2)/2
+                        IX2 = WF(IWF(2))%IXN(2)/2
+                        IZ1 = WF(IWF(1))%IZN(2)/2
+                        IZ2 = WF(IWF(3))%IZN(2)/2
                      ELSE IF (IDIFF==0 .AND. KDIFF==0) THEN
-                        IX1 = WF1%IXN(2)/2
+                        IX1 = WF(IWF(1))%IXN(2)/2
                         IX2 = IX1
-                        IZ1 = WF1%IZN(2)/2
+                        IZ1 = WF(IWF(1))%IZN(2)/2
                         IZ2 = IZ1
                      ELSE
                         CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_RESOLUTION, SCARC_NONE, IOR0)
                      ENDIF
                   CASE (3)
-                     IDIFF = WF2%IXN(1) - WF1%IXN(1)
-                     JDIFF = WF3%IYN(1) - WF1%IYN(1)
+                     IDIFF = WF(IWF(2))%IXN(1) - WF(IWF(1))%IXN(1)
+                     JDIFF = WF(IWF(3))%IYN(1) - WF(IWF(1))%IYN(1)
                      IF (IDIFF==1 .AND. JDIFF==1) THEN
-                        IX1 = WF2%IXN(2)/2
+                        IX1 = WF(IWF(2))%IXN(2)/2
                         IX2 = IX1
-                        IY1 = WF3%IYN(2)/2
+                        IY1 = WF(IWF(3))%IYN(2)/2
                         IY2 = IY1
                      ELSE IF (IDIFF==2 .AND. JDIFF==2) THEN
-                        IX1 = WF1%IXN(2)/2
-                        IX2 = WF2%IXN(2)/2
-                        IY1 = WF1%IYN(2)/2
-                        IY2 = WF3%IYN(2)/2
+                        IX1 = WF(IWF(1))%IXN(2)/2
+                        IX2 = WF(IWF(2))%IXN(2)/2
+                        IY1 = WF(IWF(1))%IYN(2)/2
+                        IY2 = WF(IWF(3))%IYN(2)/2
                      ELSE IF (IDIFF==0 .AND. JDIFF==0) THEN
-                        IX1 = WF2%IXN(2)/2
+                        IX1 = WF(IWF(2))%IXN(2)/2
                         IX2 = IX1
-                        IY1 = WF3%IYN(2)/2
+                        IY1 = WF(IWF(3))%IYN(2)/2
                         IY2 = IY1
                      ELSE
                         CALL SCARC_SHUTDOWN(NSCARC_ERROR_GRID_RESOLUTION, SCARC_NONE, IOR0)
@@ -3823,12 +3819,12 @@ DO IZ = NZ1, NZ2
                      IZ2 = IZ1
                END SELECT
 
-               WC%IXN(1) = IX1
-               WC%IYN(1) = IY1
-               WC%IZN(1) = IZ1
-               WC%IXN(2) = IX2
-               WC%IYN(2) = IY2
-               WC%IZN(2) = IZ2
+               WC(IWC)%IXN(1) = IX1
+               WC(IWC)%IYN(1) = IY1
+               WC(IWC)%IZN(1) = IZ1
+               WC(IWC)%IXN(2) = IX2
+               WC(IWC)%IYN(2) = IY2
+               WC(IWC)%IZN(2) = IZ2
 
                !> Allocate and specify ICN and ICE arrays for OLC
                NCPL = (IZ2-IZ1+1)*(IY2-IY1+1)*(IX2-IX1+1)
@@ -3844,6 +3840,8 @@ DO IZ = NZ1, NZ2
 ENDDO
 
 FF%IOFFSET_WALL = FF%IOFFSET_WALL + FF%NFW
+
+
 END SUBROUTINE SCARC_SETUP_FACE
 
 
@@ -11086,9 +11084,9 @@ SELECT CASE (NTYPE)
       !ENDIF
 
  !> ------------------------------------------------------------------------------------------------
- !> Debug complete wall and discretization information
+ !> Debug complete grid information
  !> ------------------------------------------------------------------------------------------------
-   CASE (NSCARC_DEBUG_DISCRETIZATION)
+   CASE (NSCARC_DEBUG_GRIDINFO)
       DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          M => MESHES(NM)
          L => SCARC(NM)%LEVEL(NL)
