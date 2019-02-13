@@ -5513,24 +5513,31 @@ INTEGER, INTENT(IN)    :: NSCOPE, NLMIN, NLMAX
 INTEGER, INTENT(INOUT) :: NSTACK
 TYPE(SCARC_SOLVER_TYPE), POINTER :: SOL=>NULL()
 
-SOL => STACK(NSTACK)%SOLVER
-
 SELECT_COARSE: SELECT CASE (TYPE_COARSE)
    CASE (NSCARC_COARSE_ITERATIVE)
-      SOL => COARSE_KRYLOV
+
+      !> initialize current stack position as Krylov
+      STACK(NSTACK)%SOLVER => COARSE_KRYLOV           
       CALL SCARC_SETUP_KRYLOV(NSCARC_SOLVER_COARSE, NSCOPE, NSTACK, NLMIN, NLMAX)
+
+      !> and next stack position as its SSOR-preconditioner
       NSTACK = NSTACK + 1
       TYPE_PRECON = NSCARC_RELAX_SSOR
-      SOL => PRECON_SSOR
+      STACK(NSTACK)%SOLVER => PRECON_SSOR                     
       CALL SCARC_SETUP_PRECON(NSTACK)
+
 #ifdef WITH_MKL
    CASE (NSCARC_COARSE_DIRECT)
+
+      !> Multi-mesh case: initialize current stack position as global CLUSTER_SPARSE_SOLVER
       IF (N_MPI_PROCESSES > 1) THEN
-         SOL => COARSE_CLUSTER
+         STACK(NSTACK)%SOLVER => COARSE_CLUSTER               
          CALL SCARC_SETUP_LUDECOMP(NSCARC_SOLVER_COARSE, NSCOPE, NSTACK, NLMIN, NLMAX)
          CALL SCARC_SETUP_CLUSTER(NLMIN, NLMAX)
+
+      !> Single-mesh case: initialize current stack position as PARDISO solver
       ELSE
-         SOL => COARSE_PARDISO
+         STACK(NSTACK)%SOLVER => COARSE_PARDISO
          CALL SCARC_SETUP_LUDECOMP(NSCARC_SOLVER_COARSE, NSCOPE, NSTACK, NLMIN, NLMAX)
          CALL SCARC_SETUP_PARDISO(NLMIN, NLMAX)
       ENDIF
@@ -7132,13 +7139,18 @@ END SUBROUTINE SCARC_INCREASE_ITERATION_COUNTS
 !> ------------------------------------------------------------------------------------------------
 !> Perform global CG-method based on global possion-matrix
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_CG(NS, NP, NL)
-INTEGER, INTENT(IN) :: NS, NP, NL           !> current and parent stack position, and current level
-INTEGER   :: NSTATE
+SUBROUTINE SCARC_METHOD_CG(NSTACK, NPARENT, NLEVEL)
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL           
+INTEGER   :: NSTATE, NS, NP, NL
 REAL (EB) :: SIGMA0, SIGMA1, ALPHA0, GAMMA0
 REAL (EB) :: TNOW
 
 TNOW = CURRENT_TIME()
+
+!> get current and parent stack position, and current level
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
 
 !> ------------------------------------------------------------------------------------------------
 !> Initialization:
@@ -7979,13 +7991,18 @@ END SUBROUTINE SCARC_METHOD_COARSE
 !> ------------------------------------------------------------------------------------------------
 !> Perform geometric multigrid method based on global possion-matrix
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_METHOD_MULTIGRID(NS, NP, NL)
-INTEGER, INTENT(IN) :: NS, NP                  !> references to current stack and parent
-INTEGER, INTENT(INOUT) :: NL                   !> references to current level
+SUBROUTINE SCARC_METHOD_MULTIGRID(NSTACK, NPARENT, NLEVEL)
+INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL
+INTEGER:: NS, NP, NL
 INTEGER   :: NSTATE, ICYCLE
 REAL (EB) :: TNOW, TNOW_COARSE
 
 TNOW = CURRENT_TIME()
+
+!> get current and parent stack position and current level
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
 
 !> ------------------------------------------------------------------------------------------------
 !> Initialization:
@@ -8183,13 +8200,18 @@ END FUNCTION SCARC_CYCLING_CONTROL
 !> ------------------------------------------------------------------------------------------------
 !> Perform smoothing
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SMOOTHER(NTYPE, NS, NP, NL)
-INTEGER , INTENT(IN) :: NTYPE, NS, NP, NL              !> references to current stack, parent, level
-INTEGER :: NSTATE=0
+SUBROUTINE SCARC_SMOOTHER(NTYPE, NSTACK, NPARENT, NLEVEL)
+INTEGER, INTENT(IN) :: NTYPE, NSTACK, NPARENT, NLEVEL
+INTEGER :: NSTATE=0, NS, NP, NL
 REAL(EB):: TNOW
 LOGICAL :: BMATVEC, BL2NORM
 
 TNOW = CURRENT_TIME()
+
+!> get current and parent stack position and current level
+NS = NSTACK
+NP = NPARENT
+NL = NLEVEL
 
 !> ------------------------------------------------------------------------------------------------
 !> Initialization

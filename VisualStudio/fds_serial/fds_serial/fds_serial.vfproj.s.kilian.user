@@ -4,4 +4,4 @@
 		<Configuration Name="Debug|Win32"/>
 		<Configuration Name="Release|Win32"/>
 		<Configuration Name="Debug|x64" CommandArguments="test1.fds" WorkingDirectory="../../Cases"/>
-		<Configuration Name="Release|x64" CommandArguments="test1.fds" WorkingDirectory="&quot;C:\hhpberlin\Daten\GIT\B_Firemodels\fds\VisualStudio\Cases&quot;"/></Configurations></VisualStudioUserFile>
+		<Configuration Name="Release|x64" CommandArguments="test1.fds" WorkingDirectory="../../Cases"/></Configurations></VisualStudioUserFile>
