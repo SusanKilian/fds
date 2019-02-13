@@ -394,10 +394,7 @@ LOGICAL :: BGMG        = .FALSE.                           ! Geometric Multigrid
 LOGICAL :: BTWOLEVEL   = .FALSE.                           ! Method with two grid levels used?
 LOGICAL :: BMULTILEVEL = .FALSE.                           ! Method with multiple grid levels used?
 LOGICAL :: BSTRUCTURED = .TRUE.                            ! Structured/Unstructured discretization used?
-LOGICAL :: BCSV_NONE   = .TRUE.                            ! no csv file
-LOGICAL :: BCSV_MAIN   = .FALSE.                           ! only main solver related csv information
-LOGICAL :: BCSV_MEDIUM = .FALSE.                           ! also relaxation solver related csv information
-LOGICAL :: BCSV_FULL   = .FALSE.                           ! full csv information
+LOGICAL :: BCSV        = .FALSE.                           ! store iteration statistics in CSV-file
 LOGICAL :: BFFT        = .FALSE.                           ! FFT-method used?
 LOGICAL :: BMKL        = .FALSE.                           ! MKL-method used?
 LOGICAL :: BMKL_LEVEL(NSCARC_LEVEL_MAX)  = .FALSE.         ! level-dependent MKL method used ?
@@ -909,7 +906,6 @@ CALL SCARC_PARSE_INPUT          ; IF (STOP_STATUS==SETUP_STOP) RETURN
 !> Setup all needed ScaRC structures based on input data from READ_PRES
 !>
 CALL SCARC_SETUP_LEVELS                                                   !> different grid levels
-CALL SCARC_SETUP_LOGICALS       
 CALL SCARC_SETUP_TYPES          ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> basic ScaRC-types for all used grid levels
 CALL SCARC_SETUP_MESHES         ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> mesh information
 CALL SCARC_SETUP_DISCRETIZATION ; IF (STOP_STATUS==SETUP_STOP) RETURN     !> discretization information
@@ -946,20 +942,14 @@ END SUBROUTINE SCARC_SETUP_TIMING
 !> Setup debug file if requested
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MESSAGING
+#ifdef WITH_SCARC_VERBOSE
 INTEGER:: NM, LASTID
+#endif
 
-BCSV_NONE   = TRIM(SCARC_CSV) == 'NONE'
-BCSV_MAIN   = TRIM(SCARC_CSV) == 'MAIN'
-BCSV_MEDIUM = TRIM(SCARC_CSV) == 'MEDIUM'
-BCSV_FULL   = TRIM(SCARC_CSV) == 'FULL'
-IF (BCSV_MEDIUM) BCSV_MAIN = .TRUE.
-IF (BCSV_FULL) THEN
-   BCSV_MAIN   = .TRUE.
-   BCSV_MEDIUM = .TRUE.
-ENDIF
+IF (TRIM(SCARC_CSV) == '.TRUE.') BCSV = .TRUE.
 
 !> If requested, open file for CSV-information about convergence of different solvers
-IF (.NOT.BCSV_NONE) THEN
+IF (BCSV) THEN
    IF (MYID == 0) THEN
       WRITE (MSG%FILE_CSV, '(A,A)') TRIM(CHID),'_scarc.csv'
       MSG%LU_CSV = GET_FILE_NUMBER()
@@ -1443,6 +1433,33 @@ SELECT CASE (TRIM(SCARC_PRECISION))
       CALL SCARC_SHUTDOWN(NSCARC_ERROR_PARSE_INPUT, SCARC_PRECISION, NSCARC_NONE)
 END SELECT
 
+!>
+!> define some logical variables - just for notational convenience
+!>
+BSTRUCTURED = TYPE_DISCRET == NSCARC_CELL_STRUCTURED
+
+BCG = TYPE_METHOD == NSCARC_METHOD_KRYLOV
+BCGGMG  = BCG .AND. TYPE_PRECON == NSCARC_RELAX_MULTIGRID .AND. &
+          TYPE_MULTIGRID == NSCARC_MULTIGRID_GEOMETRIC
+
+BMG = TYPE_METHOD == NSCARC_METHOD_MULTIGRID
+BGMG = BMG .AND. TYPE_MULTIGRID == NSCARC_MULTIGRID_GEOMETRIC
+
+BTWOLEVEL   = BCG .AND. &
+              TYPE_PRECON /= NSCARC_RELAX_MULTIGRID .AND. &
+              TYPE_TWOLEVEL > NSCARC_TWOLEVEL_NONE
+BMULTILEVEL = BGMG .OR. BCGGMG .OR. BTWOLEVEL
+
+BCGADD    = BTWOLEVEL .AND. TYPE_TWOLEVEL == NSCARC_TWOLEVEL_ADD
+BCGMUL    = BTWOLEVEL .AND. TYPE_TWOLEVEL == NSCARC_TWOLEVEL_MUL
+BCGCOARSE = BTWOLEVEL .AND. TYPE_TWOLEVEL == NSCARC_TWOLEVEL_COARSE
+
+BFFT =  TYPE_PRECON == NSCARC_RELAX_FFT .OR. &
+        TYPE_SMOOTH == NSCARC_RELAX_FFT
+
+BMKL = (TYPE_PRECON >= NSCARC_RELAX_PARDISO) .OR. &
+       (TYPE_SMOOTH >= NSCARC_RELAX_PARDISO) .OR. &
+       (BMULTILEVEL .AND. TYPE_COARSE == NSCARC_COARSE_DIRECT)
 END SUBROUTINE SCARC_PARSE_INPUT
 
 
@@ -1536,6 +1553,15 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
       END SELECT SELECT_MKL
 
 END SELECT SELECT_METHOD
+
+!> Define remaining logical short names based on computed number of levels
+#ifdef WITH_MKL
+DO NL = NLEVEL_MIN, NLEVEL_MAX
+   BMKL_LEVEL(NL) = (TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
+                    (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
+                    (TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) 
+ENDDO
+#endif
 
 END SUBROUTINE SCARC_SETUP_LEVELS
 
@@ -1636,45 +1662,6 @@ SCARC_GET_MAX_LEVEL=NL
 RETURN
 END FUNCTION SCARC_GET_MAX_LEVEL
 
-
-!> ------------------------------------------------------------------------------------------------
-!> Define some logical variables, simply for notational convenience
-!> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_SETUP_LOGICALS
-INTEGER :: NL
-
-BSTRUCTURED = TYPE_DISCRET == NSCARC_CELL_STRUCTURED
-
-BCG = TYPE_METHOD == NSCARC_METHOD_KRYLOV
-BCGGMG  = BCG .AND. TYPE_PRECON == NSCARC_RELAX_MULTIGRID .AND. &
-          TYPE_MULTIGRID == NSCARC_MULTIGRID_GEOMETRIC
-
-BMG = TYPE_METHOD == NSCARC_METHOD_MULTIGRID
-BGMG = BMG .AND. TYPE_MULTIGRID == NSCARC_MULTIGRID_GEOMETRIC
-
-BTWOLEVEL   = BCG .AND. &
-              TYPE_PRECON /= NSCARC_RELAX_MULTIGRID .AND. &
-              TYPE_TWOLEVEL > NSCARC_TWOLEVEL_NONE
-BMULTILEVEL = BGMG .OR. BCGGMG .OR. BTWOLEVEL
-
-BCGADD    = BTWOLEVEL .AND. TYPE_TWOLEVEL == NSCARC_TWOLEVEL_ADD
-BCGMUL    = BTWOLEVEL .AND. TYPE_TWOLEVEL == NSCARC_TWOLEVEL_MUL
-BCGCOARSE = BTWOLEVEL .AND. TYPE_TWOLEVEL == NSCARC_TWOLEVEL_COARSE
-
-BFFT =  TYPE_PRECON == NSCARC_RELAX_FFT .OR. &
-        TYPE_SMOOTH == NSCARC_RELAX_FFT
-
-BMKL = (TYPE_PRECON >= NSCARC_RELAX_PARDISO) .OR. &
-       (TYPE_SMOOTH >= NSCARC_RELAX_PARDISO) .OR. &
-       (BMULTILEVEL .AND. TYPE_COARSE == NSCARC_COARSE_DIRECT)
-
-DO NL = NLEVEL_MIN, NLEVEL_MAX
-   BMKL_LEVEL(NL) = (TYPE_LUDECOMP == NSCARC_MKL_GLOBAL .AND. NL == NLEVEL_MIN) .OR. &
-                    (TYPE_LUDECOMP == NSCARC_MKL_COARSE .AND. NL == NLEVEL_MAX) .OR. &
-                    (TYPE_LU_LEVEL(NL) == NSCARC_MKL_GLOBAL) 
-ENDDO
-
-END SUBROUTINE SCARC_SETUP_LOGICALS
 
 !> ------------------------------------------------------------------------------------------------
 !> Allocate basic ScaRC-structures for all needed levels
@@ -8391,7 +8378,7 @@ END SUBROUTINE SCARC_RELEASE_SOLVER
 !> ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DUMP_RESIDUAL(ISM, NL)
 INTEGER, INTENT(IN) :: ISM, NL
-IF (BCSV_NONE) RETURN
+IF (.NOT.BCSV) RETURN
 IF (MYID == 0) THEN
    IF (ITE_TOTAL == 0) THEN
       WRITE(MSG%LU_CSV,1000) ITE_PRES, ITE_TOTAL, ITE_CG, ITE_MG, ITE_LU, ITE_COARSE, ITE_SMOOTH, &
@@ -8409,7 +8396,7 @@ END SUBROUTINE SCARC_DUMP_RESIDUAL
 !> Dump residual information
 !> ----------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_DUMP_CAPPA
-IF (BCSV_NONE) RETURN
+IF (.NOT.BCSV) RETURN
 IF (MYID == 0) WRITE(MSG%LU_CSV,1000) -1, ITE_TOTAL, -1, -1, -1, -1, -1, -1, -1, -1, CAPPA
 1000 FORMAT(I8,',',I8,',',I8,',',I8,',',I8,',',I8,',',I4,',',I4,',',I4,',',I4,',',E20.12)
 END SUBROUTINE SCARC_DUMP_CAPPA
