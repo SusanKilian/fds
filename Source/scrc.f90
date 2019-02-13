@@ -7137,7 +7137,7 @@ ITE_TOTAL = ITE_TOTAL + 1
 END SUBROUTINE SCARC_INCREASE_ITERATION_COUNTS
 
 !> ------------------------------------------------------------------------------------------------
-!> Perform global CG-method based on global possion-matrix
+!> Perform global CG-method based on global Possion-matrix
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_CG(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL           
