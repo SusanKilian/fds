@@ -7,7 +7,7 @@
 !>     - WITH_MKL_FB        : perform MKL routines for LU-decomposition only in single precision
 !> --------------------------------------------------------------------------------------------------------
 #undef WITH_SCARC_VERBOSE
-#define WITH_SCARC_DEBUG
+#undef WITH_SCARC_DEBUG
 #undef WITH_SCARC_CGBARO
 #undef WITH_MKL_FB
 
@@ -41,14 +41,14 @@ PUBLIC SCARC_TIMINGS                           !> Call of time measurements for 
 !> ------------------------------------------------------------------------------------------------
 PUBLIC SCARC_METHOD                            !> ScaRC method
 PUBLIC SCARC_DISCRETIZATION                    !> ScaRC discretization type
-PUBLIC SCARC_TWOLEVEL                          !> Type of Twolevel-Krylov-method
+PUBLIC SCARC_MATRIX_FORMAT                     !> Storage format for matrices
 PUBLIC SCARC_RESIDUAL                          !> Residual of iterative solver
 PUBLIC SCARC_ITERATIONS                        !> Number of iterations
 PUBLIC SCARC_CAPPA                             !> Convergence rate
 PUBLIC SCARC_ACCURACY                          !> Chosen accuracy type (relative/absolute)
 PUBLIC SCARC_PRECISION                         !> Single/double precision for preconditioning or LU-decomposition
+PUBLIC SCARC_TWOLEVEL                          !> Type of Twolevel-Krylov-method
 PUBLIC SCARC_CSV                               !> Level for plotting csv information
-PUBLIC SCARC_MATRIX_FORMAT                     !> Storage format for matrices
 
 PUBLIC SCARC_KRYLOV                            !> Type of Krylov method
 PUBLIC SCARC_KRYLOV_ITERATIONS                 !> Maximum number of iterations for Krylov method
@@ -1463,34 +1463,34 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
       SELECT_KRYLOV: SELECT CASE (TYPE_PRECON)
 
 #ifdef WITH_MKL
-         CASE (NSCARC_RELAX_PARDISO)
-            IF (BTWOLEVEL) THEN
-               CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
+         CASE (NSCARC_RELAX_PARDISO)                                 !> Preconditioning by local PARDISO-solvers
+            IF (BTWOLEVEL) THEN                                      
+               CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)   !> also use additional coarse grid level
                IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_LU_LEVEL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
-            ELSE
+            ELSE                                                     !> only use single (finest) grid level 
                CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)
             ENDIF
             TYPE_LU_LEVEL(NLEVEL_MIN) = NSCARC_MKL_LOCAL
 
-         CASE (NSCARC_RELAX_CLUSTER)
-            CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)
+         CASE (NSCARC_RELAX_CLUSTER)                                 !> Preconditioning by global CLUSTER_SPARSE_SOLVER
+            CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)     !> only use single (finest) grid level 
             TYPE_LU_LEVEL(NLEVEL_MIN) = NSCARC_MKL_GLOBAL
 #endif
 
-         CASE (NSCARC_RELAX_MULTIGRID)
-            CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
+         CASE (NSCARC_RELAX_MULTIGRID)                              !> Preconditioning by local MG-methods
+            CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)     !> use specified hierarchy of grid levels
 #ifdef WITH_MKL
             IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_LU_LEVEL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
 
          CASE DEFAULT
-            IF (BTWOLEVEL) THEN
+            IF (BTWOLEVEL) THEN                                     !> also use additional coarse grid level
                CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
 #ifdef WITH_MKL
                IF (TYPE_COARSE == NSCARC_COARSE_DIRECT) TYPE_LU_LEVEL(NLEVEL_MAX) = NSCARC_MKL_GLOBAL
 #endif
-            ELSE
-               CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE)
+            ELSE                                          !> 
+               CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_SINGLE) !>only use single (finest) level
             ENDIF
       END SELECT SELECT_KRYLOV
 
@@ -1499,9 +1499,8 @@ SELECT_METHOD: SELECT CASE (TYPE_METHOD)
 
       SELECT_MULTIGRID: SELECT CASE (TYPE_MULTIGRID)
 
-         !> predefined hierarchy of levels in case of geometric multigrid-method
          CASE (NSCARC_MULTIGRID_GEOMETRIC)
-            CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)
+            CALL SCARC_GET_NUMBER_OF_LEVELS(NSCARC_LEVEL_MULTI)   !> use specified hierarchy of grid levels
 
 #ifdef WITH_MKL
             SELECT_SMOOTHER: SELECT CASE (TYPE_SMOOTH)
@@ -4469,7 +4468,6 @@ IF (BMKL_LEVEL(NL)) AC%COL_GLOBAL(IP) = AC%COL(IP) + L%NC_OFFSET(NM)
 #endif
 
 AC%STENCIL(0) = AC%VAL(IP)
-WRITE(*,*) 'DIAG: AC%STENCIL(0)=',AC%VAL(IP)
 
 IP = IP + 1
 END SUBROUTINE SCARC_SETUP_MATRIX_MAINDIAG_CSR
@@ -4522,7 +4520,6 @@ IF (BINTERNAL) THEN
       AC%COL(IP) = L%CELL_NUMBER(IX2, IY2, IZ2)
 
       AC%STENCIL(-IOR0) = AC%VAL(IP)
-      WRITE(*,*) 'SUBDIAG: AC%STENCIL(',-IOR0,')=',AC%VAL(IP)
 
 #ifdef WITH_MKL
       IF (BMKL_LEVEL(NL)) AC%COL_GLOBAL(IP)= AC%COL(IP) + L%NC_OFFSET(NM)
@@ -4542,7 +4539,6 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
       AC%COL(IP) = L%WALL(IW)%ICE(1)                   !> store its extended number in matrix column pointers
 
       AC%STENCIL(-IOR0) = AC%VAL(IP)
-      WRITE(*,*) 'SUBDIAG: AC%STENCIL(',IOR0,')=',AC%VAL(IP)
 
 #ifdef WITH_MKL
       IF (BMKL_LEVEL(NL)) THEN                         !> if MKL method used, also store its global number
@@ -8459,7 +8455,6 @@ SELECT CASE (SOL%TYPE_SOLVER)
                   IC = L%CELL_NUMBER(I,J,K)
                   SCO%B(IC) = PRHS(I, J, K)                 !> use right hand side from pres-routine
                   SCO%X(IC) = HP(I, J, K)                   !> use last iterate as initial solution
-WRITE(MSG%LU_DEBUG,*) 'B(',IC,')=',SCO%B(IC), I, J, K, NM, NL, SOL%TYPE_SCOPE
                ENDDO
             ENDDO
          ENDDO
