@@ -7143,10 +7143,10 @@ SUBROUTINE SCARC_METHOD_CG(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL           
 INTEGER   :: NSTATE, NS, NP, NL
 REAL (EB) :: SIGMA0, SIGMA1, ALPHA0, GAMMA0
-REAL (EB) :: TNOW
+REAL (EB) :: TNOW                                                                                       !>
 
 TNOW = CURRENT_TIME()
-
+!> test
 !> get current and parent stack position, and current level
 NS = NSTACK
 NP = NPARENT
