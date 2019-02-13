@@ -5205,10 +5205,10 @@ END SUBROUTINE SCARC_SETUP_CONDENSING
 SUBROUTINE SCARC_SETUP_METHODS
 INTEGER :: NSTACK
 
-SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
+SELECT_METHOD: SELECT CASE(TYPE_METHOD)
 
    !> ------------------ Krylov method -------------------------------------
-   CASE ('KRYLOV')
+   CASE (NSCARC_METHOD_KRYLOV)
 
       !> Setup basic Krylov solver
       NSTACK = NSCARC_STACK_ROOT
@@ -5285,7 +5285,7 @@ SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
       ENDIF
 
    !> ------------------ Multigrid method -------------------------------------
-   CASE ('MULTIGRID')
+   CASE (NSCARC_METHOD_MULTIGRID)
 
       NSTACK = NSCARC_STACK_ROOT
       STACK(NSTACK)%SOLVER => MAIN_MULTIGRID
@@ -5321,7 +5321,7 @@ SELECT_METHOD: SELECT CASE (TRIM(SCARC_METHOD))
 
 #ifdef WITH_MKL
    !> ------------------ MKL method -------------------------------------
-   CASE ('MKL')
+   CASE (NSCARC_METHOD_LUDECOMP)
 
       NSTACK = NSCARC_STACK_ROOT
       STACK(NSTACK)%SOLVER => MAIN_LUDECOMP
