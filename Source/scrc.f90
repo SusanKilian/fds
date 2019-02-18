@@ -6439,8 +6439,8 @@ END SUBROUTINE SCARC_SOLVER
 !> where NV1 is a reference to X and NV2 is a reference to Y
 !> including data exchange along internal boundaries
 !> ------------------------------------------------------------------------------------------------
-SUBROUTINE SCARC_MATVEC_PRODUCT(NV1, NV2, NL)
-INTEGER, INTENT(IN):: NV1, NV2, NL
+SUBROUTINE SCARC_MATVEC_PRODUCT(NV1, NV2, NS, NL)
+INTEGER, INTENT(IN):: NV1, NV2, NS, NL           !> references to vector1, vector2, current stack position and level
 REAL(EB) :: TNOW
 INTEGER :: NM, IC, JC, IOR0, ICOL
 REAL(EB), POINTER, DIMENSION(:) :: V1, V2 
@@ -6456,11 +6456,13 @@ CALL SCARC_DEBUG_LEVEL (NV2, 'A: MATVEC 2 ', NL)
 #endif
 
 !>
-!> Exchange internal boundary values of vector1 such that the ghost values contain the corresponding
-!> overlapped values of adjacent neighbor
+!> If this call is related to a globally acting solver, exchange internal boundary values of 
+!> vector1 such that the ghost values contain the corresponding overlapped values of adjacent neighbor
 !>
-TYPE_VECTOR = NV1
-CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR, NL)
+IF (STACK(NS)%SOLVER%TYPE_SCOPE == NSCARC_SCOPE_GLOBAL) THEN
+   TYPE_VECTOR = NV1
+   CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR, NL)
+ENDIF
 
 #ifdef WITH_SCARC_DEBUG
 CALL SCARC_DEBUG_LEVEL (NV1, 'B: MATVEC 1 ', NL)
@@ -7320,7 +7322,7 @@ CALL SCARC_DEBUG_LEVEL (B, 'B INIT1', NL)
 !> ------------------------------------------------------------------------------------------------
 !> Compute initial residual and perform initial preconditioning
 !> ------------------------------------------------------------------------------------------------
-CALL SCARC_MATVEC_PRODUCT (X, W, NL)                         !>  W := A*X
+CALL SCARC_MATVEC_PRODUCT (X, W, NS, NL)                     !>  W := A*X
 CALL SCARC_VECTOR_SUM     (B, W, -1.0_EB, 1.0_EB, NL)        !>  W := W - B
 
 #ifdef WITH_SCARC_DEBUG
@@ -7350,7 +7352,7 @@ CG_LOOP: DO ITE = 1, NIT
 
    CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
 
-   CALL SCARC_MATVEC_PRODUCT (V, Y, NL)                  !>  Y := A*V
+   CALL SCARC_MATVEC_PRODUCT (V, Y, NS, NL)                  !>  Y := A*V
 
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_LEVEL (V, 'V ITE1', NL)
@@ -7469,7 +7471,7 @@ CALL SCARC_DEBUG_LEVEL (B, 'B INIT1', NL)
 !> ------------------------------------------------------------------------------------------------
 !> Compute initial residual and perform initial preconditioning
 !> ------------------------------------------------------------------------------------------------
-CALL SCARC_MATVEC_PRODUCT (X, W, NL)                         !>  W := A*X
+CALL SCARC_MATVEC_PRODUCT (X, W, NS, NL)                     !>  W := A*X
 CALL SCARC_VECTOR_SUM     (B, W, -1.0_EB, 1.0_EB, NL)        !>  W := W - B
 
 #ifdef WITH_SCARC_DEBUG
@@ -7498,7 +7500,7 @@ ENDIF
 CG_LOOP: DO ITE = 1, NIT
 
    CALL SCARC_INCREASE_ITERATION_COUNTS(ITE)
-   CALL SCARC_MATVEC_PRODUCT (V, Y, NL)                      !>  Y := A*D
+   CALL SCARC_MATVEC_PRODUCT (V, Y, NS, NL)                  !>  Y := A*D
 
 #ifdef WITH_SCARC_DEBUG
    CALL SCARC_DEBUG_LEVEL (V, 'V ITE1', NL)
@@ -7511,7 +7513,7 @@ CG_LOOP: DO ITE = 1, NIT
    CALL SCARC_VECTOR_SUM (V, X, ALPHA0, 1.0_EB, NL)          !>  X := ALPHA0*D + X
 
    !> --- Start: Get new right hand side
-   CALL SCARC_MATVEC_PRODUCT (X, W, NL)                      !>  W := A*X
+   CALL SCARC_MATVEC_PRODUCT (X, W, NS, NL)                  !>  W := A*X
    CALL GET_NEW_RHS(NS,NL)                                   !> new RHS in B
    !> --- End:   Get new right hand side
 
@@ -7928,8 +7930,8 @@ DBETA  = 0.0_EB
 DTHETA = 1.0_EB
 
 !CALL SCARC_VECTOR_COPY    (B, W, 1.0_EB, NL)                         !>  W := B
-!CALL SCARC_DEFECT_CORRECTION (W, W, NS, NP, NL)                           !>  W := PRECON(W)
-CALL SCARC_MATVEC_PRODUCT (X, W, NL)                                  !>  W := A*X
+!CALL SCARC_DEFECT_CORRECTION (W, W, NS, NP, NL)                      !>  W := PRECON(W)
+CALL SCARC_MATVEC_PRODUCT (X, W, NS, NL)                              !>  W := A*X
 CALL SCARC_VECTOR_SUM     (B, W, 1.0_EB, -1.0_EB, NL)                 !>  W := B - W
 WRITE(*,*) 'ACHTUNG: HIER RICHTIGE VEKTOREN CHECKEN! EHEMALS W,W'
 CALL SCARC_PRECONDITIONER(NS, NS, NL)
@@ -7957,7 +7959,7 @@ BICG_LOOP: DO ITE = 1, NIT
 
    CALL SCARC_VECTOR_SUM (W, Z, 1.0_EB       , DBETA , NL)            !> Z := W + DBETA*Z
    CALL SCARC_VECTOR_SUM (Y, Z, -DBETA*ALPHA0, 1.0_EB, NL)            !> Z := -DBETA*ALPHA0*Y + Z
-   CALL SCARC_MATVEC_PRODUCT (Z, Y, NL)                               !> Y := A*Z
+   CALL SCARC_MATVEC_PRODUCT (Z, Y, NS, NL)                           !> Y := A*Z
    WRITE(*,*) 'ACHTUNG: HIER RICHTIGEN VEKTOREN CHECKEN! EHEMALS Y,Y'
    CALL SCARC_PRECONDITIONER(NS, NS, NL)
 
@@ -7965,7 +7967,7 @@ BICG_LOOP: DO ITE = 1, NIT
    DTHETA = RHO1/DTHETA
 
    CALL SCARC_VECTOR_SUM (Y, W, -DTHETA, 1.0_EB, NL)                  !> W := -DTHETA*Y + W
-   CALL SCARC_MATVEC_PRODUCT (W, V, NL)                               !> D := A*W
+   CALL SCARC_MATVEC_PRODUCT (W, V, NS, NL)                           !> D := A*W
    WRITE(*,*) 'ACHTUNG: HIER RICHTIGEN VEKTOREN CHECKEN!, EHEMALS D,D'
    CALL SCARC_PRECONDITIONER(NS, NS, NL)
 
@@ -8061,11 +8063,11 @@ SELECT CASE (TYPE_TWOLEVEL)
       DO NL0 = NLEVEL_MAX-1, NL, -1
          CALL SCARC_PROLONGATION (Y, Y, NL+1, NL)                 !>  Q := prol(X_coarse)
       ENDDO
-      CALL SCARC_MATVEC_PRODUCT (Y, Z, NL)                        !>  Z := A_fine*Q
+      CALL SCARC_MATVEC_PRODUCT (Y, Z, NS, NL)                    !>  Z := A_fine*Q
 
       CALL SCARC_VECTOR_SUM (W, Z, 1.0_EB, -1.0_EB, NL)           !>  Z := W - Z
       CALL SCARC_VECTOR_COPY (Z, Q, 1.0_EB, NL)                   !>  Q := Z
-      CALL SCARC_DEFECT_CORRECTION (Z, Q, NS+1, NP, NL)                !>  Q := PRECON(Z)
+      CALL SCARC_DEFECT_CORRECTION (Z, Q, NS+1, NP, NL)           !>  Q := PRECON(Z)
       CALL SCARC_VECTOR_SUM (Y, Q, 1.0_EB, 1.0_EB, NL)            !>  Z := W - Z
 
    !> --------------------------------------------------------------------
@@ -8074,8 +8076,8 @@ SELECT CASE (TYPE_TWOLEVEL)
    CASE (NSCARC_TWOLEVEL_MUL2)
 
       CALL SCARC_VECTOR_COPY (W, Q, 1.0_EB, NL)                   !>  Q := W
-      CALL SCARC_DEFECT_CORRECTION (W, Q, NS+1, NP, NL)                !>  Q := PRECON(W)
-      CALL SCARC_MATVEC_PRODUCT (Q, Z, NL)                        !>  Z := A_fine*Q
+      CALL SCARC_DEFECT_CORRECTION (W, Q, NS+1, NP, NL)           !>  Q := PRECON(W)
+      CALL SCARC_MATVEC_PRODUCT (Q, Z, NS, NL)                    !>  Z := A_fine*Q
 
       CALL SCARC_VECTOR_SUM (W, Z, 1.0_EB, -1.0_EB, NL)           !>  Z := W - Z
 
@@ -8160,7 +8162,7 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 !>   - Perform initial matrix-vector product on finest level
 !>   - calculate norm of initial residual on finest level
 !> ------------------------------------------------------------------------------------------------
-CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                  !>  V := A*X
+CALL SCARC_MATVEC_PRODUCT (X, V, NS, NL)                              !>  V := A*X
 CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                     !>  V := B - V
 
 ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_SETUP, NL)
@@ -8212,7 +8214,7 @@ MULTIGRID_LOOP: DO ITE = 1, NIT
  !> ---------------------------------------------------------------------------------------------
  !> Compute norm of new residual on finest level and  leave loop correspondingly
  !> ---------------------------------------------------------------------------------------------
-   CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                       !> V := A*X
+   CALL SCARC_MATVEC_PRODUCT (X, V, NS, NL)                                   !> V := A*X
    CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                          !> V := F - V
 
    RES = SCARC_L2NORM (V, NL)                                                 !> RES := ||V||
@@ -8374,7 +8376,7 @@ BL2NORM = .TRUE.
 !> Because initial vector is set to zero, this defect corresponds to F
 !> ------------------------------------------------------------------------------------------------
 IF (BMATVEC) THEN
-   CALL SCARC_MATVEC_PRODUCT (X, V, NL)                                  !>  V := A*X
+   CALL SCARC_MATVEC_PRODUCT (X, V, NS, NL)                              !>  V := A*X
    CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                     !>  V := B - V
 ENDIF
 
@@ -8394,16 +8396,16 @@ SMOOTH_LOOP: DO ITE=1, NIT
 #ifdef WITH_MKL
    IF (TYPE_SMOOTH == NSCARC_DEFCOR_LU .OR. TYPE_SMOOTH == NSCARC_DEFCOR_LU) THEN
       CALL SCARC_VECTOR_COPY(V, Z, 1.0_EB, NL)
-      CALL SCARC_DEFECT_CORRECTION (Z, V, NS, NP, NL)                        !>  V := PRECON (V)
+      CALL SCARC_DEFECT_CORRECTION (Z, V, NS, NP, NL)                   !>  V := PRECON (V)
    ELSE
-      CALL SCARC_DEFECT_CORRECTION (V, V, NS, NP, NL)                        !>  V := PRECON (V)
+      CALL SCARC_DEFECT_CORRECTION (V, V, NS, NP, NL)                   !>  V := PRECON (V)
    ENDIF
 #else
-   CALL SCARC_DEFECT_CORRECTION (V, V, NS, NP, NL)                           !>  V := PRECON (V)
+   CALL SCARC_DEFECT_CORRECTION (V, V, NS, NP, NL)                      !>  V := PRECON (V)
 #endif
 
    CALL SCARC_VECTOR_SUM      (V, X, OMEGA, 1.0_EB, NL)                 !>  X := OMEGA*V + X
-   CALL SCARC_MATVEC_PRODUCT  (X, V, NL)                                !>  V := A*X
+   CALL SCARC_MATVEC_PRODUCT  (X, V, NS, NL)                            !>  V := A*X
 
    CALL SCARC_VECTOR_SUM      (B, V, 1.0_EB, -1.0_EB, NL)               !>  V := B - V
 
