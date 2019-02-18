@@ -4588,7 +4588,7 @@ When simulating a wind with {\ct OPEN} boundaries, you might notice spurious vel
 
 Similar to the mean forcing feature, you may specify a constant and uniform force per unit volume by setting {\ct FORCE\_VECTOR(1:3)} on the {\ct WIND} line.  This is useful, for example, in specifying a mean pressure drop in a duct.  In the absence of other forces, the force vector $F_i$ affects the momentum equation by
 \begin{equation}
-\frac{\partial u_i}{\partial t} + \dots = -F_i/\rho
+\frac{\partial u_i}{\partial t} + \dots = F_i/\rho
 \end{equation}
 This feature is typically used together with periodic boundaries.  To specify a mean pressure drop of 0.01 Pa/m in the $x$ direction for a periodic duct, for example, use
 \begin{lstlisting}
@@ -4598,6 +4598,45 @@ This feature is typically used together with periodic boundaries.  To specify a 
 \end{lstlisting}
 You may apply a time ramp to {\ct FORCE\_VECTOR(1)}, for example, via {\ct RAMP\_FVX\_T} on the {\ct WIND} line.
 
+\subsection{Coriolis Force}
+\label{info:coriolis_force}
+
+The Coriolis force accounts for a rotating reference frame \cite{Stull:2000}.  The Coriolis acceleration augments the right-hand side of the Navier-Stokes equations as follows:
+\begin{equation}
+\DoD{\mathbf{u}}{t} = ... - 2 {\bm\Omega} \times \mathbf{u}
+\end{equation}
+Where is ${\bm\Omega}$ is the rotation vector (see Fig.~\ref{fig:rotation_vector}).  To apply the Coriolis force in FDS, you have two options: either specify the components of ${\bm\Omega}$ directly on the {\ct WIND} lines via {\ct CORIOLIS\_VECTOR(3)}, or you can take the easy route and simply specify the {\ct LATITUDE} (degrees) of the domain, provided you align the $x$ direction with east.  In this latter case, FDS will compute the rotation vector for you as
+\begin{equation}
+\label{eq:earth_rotvec}
+{\bm\Omega} = \omega \left[ \begin{array}{c} 0 \\ \cos(\phi \pi/180) \\ \sin(\phi \pi/180) \end{array} \right]
+\end{equation}
+where $\omega$ is Earth's rotation rate, about $1.16 \times 10^{-5}$ $2\pi$/s.
+
+The nondimensional number that determines if the Coriolis force is significant is the Rossby number.  Let $U$ be the relevant velocity scale and $L$ the length scale of the problem.  The Coriolis freqency is given by $f_c=2 \omega \sin(\phi\pi/180)$.  The Rossby number is then given by
+\begin{equation}
+\label{eq:rossby_number}
+\mbox{Ro} = \frac{U}{f_c L}
+\end{equation}
+When the Rossby number is large, the Coriolis force is negligible.  In building fires, this is typically the case, as $U$ and $L$ are of order unity and $f_c = {\cal O}(10^4)$.
+
+\begin{figure}
+\centering
+\includegraphics[scale=1.5]{FIGURES/Coriolis_vector}
+\caption{The rotation vector ${\bm\Omega}$ points from the Earth's center to the North Pole.  To apply the effect of rotation on our model, we need to know the components of the rotation vector in the reference frame of the computational domain.  Typically, we align the computational domain so that $x$ points east, $y$ points north, and $z$ represents elevation.  The angle $\phi$ [degrees] is the latitude, positive [$0^{\circ}$, $90^{\circ}$] in the northern hemisphere, negative [$0^{\circ}$, $-90^{\circ}$] in the southern hemisphere.  The rotation rate $\omega$ is (obviously) 1 rotation per day or $2\pi/(24 \times 3600) \approx 1.16 \times 10^{-5}$ $2\pi$/s.}
+\label{fig:rotation_vector}
+\end{figure}
+
+
+\subsection{Geostrophic Wind}
+\label{info:geostrophic_wind}
+
+The \emph{geostropic wind} is a theoretical construct obtained from the lateral momentum equations when the Coriolis force is in balance with the horizontal pressure gradient at steady state \cite{Stull:2000}.  The horizontal wind components can be written as
+\begin{align}
+\label{eq:geostrophic_wind}
+U_g &= - \frac{1}{\rho f_c} \frac{\partial \bar{p}}{\partial y} \\
+V_g &= + \frac{1}{\rho f_c} \frac{\partial \bar{p}}{\partial x}
+\end{align}
+If the geostrophic wind speed is known, it can be entered on the {\ct WIND} line via {\ct GEOSTROPHIC\_WIND(1:2)} = $(U_g, V_g)$.  Notice that specification of the wind in $x$ implies a mean pressure gradient in $y$ and vice versa.  When a geostropic wind is specified, FDS converts this value to the implied {\ct FORCE\_VECTOR} according to Eq.~(\ref{eq:geostrophic_wind}).  To achieve the specified geostrophic wind aloft, you must also have the Coriolis force turned on (see Sec.~\ref{info:coriolis_force}).  Since the geostrophic wind is equivalent to applying {\ct FORCE\_VECTOR}, you may also apply a time ramp (see Sec.~\ref{info:force_vector}).
 
 
 \section{Wind Method 3: The ``Wall of Wind''}
@@ -4605,7 +4644,7 @@ You may apply a time ramp to {\ct FORCE\_VECTOR(1)}, for example, via {\ct RAMP\
 
 An alternative to using Monin-Obukhov similarity theory in specifying a wind is to specify a power law wind profile at an external boundary of the computational domain. This essentially creates a ``wall of wind'' and for early versions of FDS it was the recommended method for specifying a wind. However, the techniques described above are preferable because they handle the lateral boundaries of the computational domain in a more natural way.
 
-To specify a ``wall of wind'', set {\ct PROFILE='ATMOSPHERIC'} on the {\ct SURF} line that is assigned to an exterior lateral boundary of the computational domain. This generates a power law atmospheric wind profile of the form $u=u_0 (z/z_0)^p$ where $z$ is the height above the ground. If an atmospheric profile is prescribed, also prescribe {\ct Z0} for $z_0$  and {\ct PLE} for $p$. {\ct VEL} specifies the reference velocity $u_0$. Note that $z_0$ is not the ground, but rather the height above the ground where the wind speed is measured, like an elevated weather station. It is assumed that the ground is located at 0~m; to change this assumption, set {\ct GROUND\_LEVEL} on the {\ct WIND} line to be the appropriate elevation. Be careful not to apply an atmospheric velocity profile (e.g. negative $z$) below {\ct GROUND\_LEVEL} or FDS will stop with an error
+To specify a ``wall of wind'', set {\ct PROFILE='ATMOSPHERIC'} on the {\ct SURF} line that is assigned to an exterior lateral boundary of the computational domain. This generates a power law atmospheric wind profile of the form $u=u_0 (z/z_0)^p$ where $z$ is the height above the ground. If an atmospheric profile is prescribed, also prescribe {\ct Z0} for $z_0$  and {\ct PLE} for $p$. {\ct VEL} specifies the reference velocity $u_0$. Note that $z_0$ is not the ground, but rather the height above the ground where the wind speed is measured, like an elevated weather station. It is assumed that the ground is located at 0~m; to change this assumption, set {\ct GROUND\_LEVEL} on the {\ct WIND} line to be the appropriate elevation. Be careful not to apply an atmospheric velocity profile (e.g. negative $z$) below {\ct GROUND\_LEVEL} or FDS will stop with an error.
 
 Sometimes when using a wall of wind, you may want to initialize the flow to the chosen wind speed throughout the domain, but you may not want this initial wind field to persist indefinitely. In such cases, specify your initial flow components {\ct U0}, {\ct V0}, and/or {\ct W0} directly and do not use the parameter {\ct SPEED}. Setting the velocity components directly will initialize the simulation with a constant flow field, but the flow field will die off unless you add a blower somewhere in the domain.
 
@@ -5893,6 +5932,7 @@ Note: The sign of {\ct NU} corresponds to whether that species is consumed (-) o
 
 If soot deposition is being computed, the soot present on surfaces can undergo oxidation if the local temperature is high enough and oxygen is present. Soot oxidation is enabled with the logical flag {\ct SOOT\_OXIDATION} on the {\ct MISC} input. Oxidation is computed as a single step, Arrhenius reaction using the soot surface density and the local oxygen mole fraction. The reaction uses a rate constant of $4.7 \times 10^{12}$ and an activation energy of 211~kJ/mol. These values are based upon work performed by Hartman, Beyler, Riahi, and Beyler~\cite{Hartman_2012}.
 
+Soot oxidation cannot be used with simple chemistry; you must use primitve species. See the {\ct soot\_oxidation\_wall} example case in the Verification Guide.
 
 \section{Special Topic: Aerosol Agglomeration}
 \label{info:agglomeration}
@@ -6245,7 +6285,7 @@ distributed about the median value.
 \includegraphics[height=2.2in]{SCRIPT_FIGURES/droplet_distributions_3} &
 \includegraphics[height=2.2in]{SCRIPT_FIGURES/droplet_distributions_4}
 \end{tabular}
-\caption[Droplet size distributions]{Droplet size distributions. The first three plots are based on a specified CVF from which the CNF is derived. The fourth plot (lower right) is an example of a specified CNF from which the CVF is derived. CVF:s are plotted with black lines, while CNF:s are plotted with red lines. The solid lines show the prescribed sampling distribution, while the dashed lines show the actual sampled droplet size distribution, measured with the {\ct PDPA\_HISTOGRAM} functionality.}
+\caption[Droplet size distributions]{Droplet size distributions. The first three plots are based on a specified CVF (black curves) from which the CNF (red curves) is derived. The fourth plot (lower right) is an example of a specified CNF from which the CVF is derived. The solid lines show the prescribed sampling distribution, while the dashed lines show the actual sampled droplet size distribution, measured with the {\ct PDPA\_HISTOGRAM} functionality.}
 \label{droplet_distributions}
 \end{figure}
 
@@ -8427,11 +8467,13 @@ For solid phase output quantities, like heat fluxes and surface temperatures, th
 
 \subsubsection{Minimum or Maximum Value}
 
-For a gas phase scalar quantity defined at the center of each grid cell, $\phi_{ijk}$, set {\ct SPATIAL\_STATISTIC} to {\ct ='MIN'} or {\ct 'MAX'} to compute the minimum or maximum value, respectively, over the cells that are included in the specified volume bounded by {\ct XB}:
+For a scalar quantity defined at the center of gas or solid phase cells, $\phi_{ijk}$, set {\ct SPATIAL\_STATISTIC} to {\ct 'MIN'} or {\ct 'MAX'} to compute the minimum or maximum value, respectively, over the cells that are included in the specified volume bounded by {\ct XB}:
 \be
    \min_{ijk} \, \phi_{ijk} \quad ; \quad  \max_{ijk} \, \phi_{ijk}
 \ee
-Note that this statistic is only appropriate for gas phase quantities. Note also that you must specify a volume to sum over via the coordinate parameters, {\ct XB}, which can extend into multiple meshes.
+Note also that you must specify a volume to sum over via the coordinate parameters, {\ct XB}, which can extend into multiple meshes.
+
+If you want to know where the specified {\ct QUANTITY} achieves its minimum or maximum value over the specified volume {\ct XB}, set {\ct SPATIAL\_STATISTIC} to {\ct 'MINLOC X'} or {\ct 'MAXLOC X'} for the $x$ coordinate. Substitute {\ct Y} or {\ct Z} if you desire the $y$ or $z$ coordinate, in m.
 
 
 \subsubsection{Average Value}
@@ -8699,33 +8741,32 @@ The quality of a particular simulation is most directly tied to grid resolution.
 
 A scalar quantity referred to as the \emph{measure of turbulence resolution} \cite{Pope:2004} is defined locally as:
 \begin{eqnarray}
+\label{eq:MTR}
 M(\mathbf{x}) = \frac{\left\langle k_{\rm sgs} \right\rangle}{\left\langle \mbox{TKE} \right\rangle + \left\langle k_{\rm sgs} \right\rangle}
 \end{eqnarray}
-where the resolved turbulent kinetic energy per unit mass is:
-\vskip-.6cm
-\begin{align}
-\mbox{TKE} &= \mbox{$\frac{1}{2}$}(\textbf{u}_i - \left\langle \textbf{u}_i \right\rangle) (\textbf{u}_i - \left\langle \textbf{u}_i \right\rangle)
-\end{align}
-Where $\textbf{u}$ is the cell centered velocity vector from the velocity components at cell faces (i.e. $ \tilde{\textbf{u}}=\left( \bar{u},\bar{v},\bar{w} \right) $), angled brackets denote time-averaged values and subscript $i$ indicate grid indices. To output resolved TKE use the following {\ct DEVC}s to output the three velocity components:
+Angled brackets denote suitable time-averages.
+
+The turbulent kinetic energy (TKE) must be post processed because we cannot compute the fluctuation until we know the mean. Use the following {\ct DEVC}s to output the three velocity components:
 
 \begin{lstlisting}
 &DEVC ..., QUANTITY='U-VELOCITY' /
 &DEVC ..., QUANTITY='V-VELOCITY' /
 &DEVC ..., QUANTITY='W-VELOCITY' /
 \end{lstlisting}
-
-The output of these {\ct DEVC}s must be post-processed to obtain resolved TKE. First, output the velocity vector $\textbf{u}$ using the velocity components, choose a suitable time-averaging period (which will be case-specific), output a mean velocity $\left\langle \textbf{u} \right\rangle$ and hence the fluctuation in velocity $(\textbf{u} - \left\langle \textbf{u} \right\rangle)$.
-
-The subgrid kinetic energy is estimated from Deardorff's eddy viscosity model
+TKE is then computed by
+\vskip-.6cm
+\begin{gather}
+  \mbox{TKE} = \mbox{$\frac{1}{2}$} \big( (\tilde{u}-\left\langle \tilde{u} \right\rangle)^2 + (\tilde{v}-\left\langle \tilde{v} \right\rangle)^2 +(\tilde{w}-\left\langle \tilde{w} \right\rangle)^2 \big)
+\end{gather}
+The subgrid kinetic energy is estimated from Deardorff's eddy viscosity model (see \cite{FDS_Math_Guide})
 \begin{align}
-k_{\rm sgs} &\approx \mbox{$\frac{1}{2}$}(\tilde{u}_i - \hat{\tilde{u}}_i)(\tilde{u}_i - \hat{\tilde{u}}_i) = ( \mu_t/(\rho C_\nu \Delta) )^2
+k_{\rm sgs} &\approx ( \mu_t/(\rho C_\nu \Delta) )^2
 \end{align}
-Here, $C_\nu$ is the Deardorff eddy viscosity model constant, $\tilde{u}_i$ is the resolved LES velocity and $\hat{\tilde{u}}_i$ is test filtered at a scale $2\Delta$ where $\Delta$ is the LES filter width (in FDS, $\Delta=\delta x$).  In the bulk flow region, the model for the SGS fluctuations is taken from scale similarity \cite{Bardina:1980}.  Cross-term energy is ignored.  Keep in the mind, however, that the test filter operation is ill-defined near walls, and so FDS employs constant Smagorinsky in these cells to compute the eddy viscosity.
-
 To output an estimate of the subgrid kinetic energy per unit mass use
 \begin{lstlisting}
 &DEVC ..., QUANTITY='SUBGRID KINETIC ENERGY' /
 \end{lstlisting}
+You should then average TKE and $k_{sgs}$ for use in (\ref{eq:MTR}).
 
 The concept behind the measure of turbulence resolution is illustrated in Figure \ref{fig_mtr}. Notice that on the left the difference between the grid signal and the test signal is very small.  On the right, the grid signal is highly turbulent and the corresponding test signal is much smoother.  We infer then that the flow is under-resolved.
 \begin{figure}[ht]
@@ -9173,6 +9214,7 @@ of a {\ct DUCT\_ID}, and quantities for a node require the specification of a {\
 \endhead
 {\ct AIRCOIL HEAT EXCHANGE}                     & Heat exchange rate for an aircoil         &  kW                   \\ \hline
 {\ct DUCT DENSITY}                              & Density of the flow in a duct             &  kg/m$^3$             \\ \hline
+{\ct DUCT ENERGY FLOW}                          & Energy flow in a duct                     &  kW                   \\ \hline
 {\ct DUCT MASS FLOW}                            & Mass flow in a duct                       &  kg/s                 \\ \hline
 {\ct DUCT MASS FRACTION}                        & Mass fraction of a species in a duct      &  kg/kg                \\ \hline
 {\ct DUCT TEMPERATURE}                          & Temperature of the flow in a duct         & $^\circ$C             \\ \hline
@@ -9183,6 +9225,7 @@ of a {\ct DUCT\_ID}, and quantities for a node require the specification of a {\
 {\ct FILTER LOADING}                            & Loading of a species in a filter          &  kg                   \\ \hline
 {\ct FILTER LOSS}                               & Flow loss through a filter                &                       \\ \hline
 {\ct NODE DENSITY}                              & Density of the flow through a node        &  kg/m$^3$             \\ \hline
+{\ct NODE ENTHALPY}                             & Enthalpy of a node                        &  kJ/kg                \\ \hline
 {\ct NODE MASS FRACTION}                        & Mass fraction of a species in a node      &  kg/kg                \\ \hline
 {\ct NODE PRESSURE}                             & Pressure of a node                        &       Pa              \\ \hline
 {\ct NODE PRESSURE DIFFERENCE}                  & Pressure difference between two nodes     &       Pa              \\ \hline
@@ -10740,13 +10783,15 @@ $\Delta t$={\ct T\_END-T\_BEGIN}
 \multicolumn{5}{|c|}{{\ct WIND} (Wind and atmospheric parameters)} \\
 \hline \hline
 \endhead
-%{\ct CORIOLIS\_VECTOR(3)}                       & Real          &                                               &               & 0.                \\ \hline
+{\ct CORIOLIS\_VECTOR(3)}                       & Real          & Section~\ref{info:coriolis_force}             &               & 0.                \\ \hline
 {\ct DIRECTION}                                 & Real          & Section~\ref{info:WIND}                       & degrees       & 270               \\ \hline
 {\ct DT\_MEAN\_FORCING}                         & Real          & Section~\ref{info:WIND}                       & s             & 1.                \\ \hline
 {\ct FORCE\_VECTOR(3)}                          & Real          & Section~\ref{info:force_vector}               &               & 0.                \\ \hline
+{\ct GEOSTROPHIC\_WIND(2)}                      & Real          & Section~\ref{info:geostrophic_wind}           & m/s           &                   \\ \hline
 {\ct GROUND\_LEVEL}                             & Real          & Section~\ref{info:stratification}             & m             & 0.                \\ \hline
 {\ct L}                                         & Real          & Section~\ref{info:WIND}                       & m             & 0                 \\ \hline
 {\ct LAPSE\_RATE}                               & Real          & Section~\ref{info:stratification}             & $^\circ$C/m   & 0                 \\ \hline
+{\ct LATITUDE}                                  & Real          & Section~\ref{info:coriolis_force}             & degrees       &                   \\ \hline
 {\ct RAMP\_DIRECTION}                           & Character     & Section~\ref{info:WIND}                       &               &                   \\ \hline
 {\ct RAMP\_FVX\_T}                              & Character     & Section~\ref{info:force_vector}               &               &                   \\ \hline
 {\ct RAMP\_FVY\_T}                              & Character     & Section~\ref{info:force_vector}               &               &                   \\ \hline

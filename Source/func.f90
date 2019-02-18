@@ -145,7 +145,7 @@ SUBROUTINE CHECKREAD(NAME,LU,IOS)
 
 ! Look for the namelist variable NAME and then stop at that line.
 
-USE GLOBAL_CONSTANTS, ONLY: INPUT_FILE_LINE_NUMBER
+USE GLOBAL_CONSTANTS, ONLY: INPUT_FILE_LINE_NUMBER,STOP_STATUS,SETUP_STOP,MYID,LU_ERR
 INTEGER :: II
 INTEGER, INTENT(OUT) :: IOS
 INTEGER, INTENT(IN) :: LU
@@ -160,9 +160,17 @@ READLOOP: DO
       IF (TEXT(II:II)/='&' .AND. TEXT(II:II)/=' ') EXIT TLOOP
       IF (TEXT(II:II)=='&') THEN
          IF (TEXT(II+1:II+4)==NAME) THEN
-            BACKSPACE(LU)
-            IOS = 0
-            EXIT READLOOP
+            IF (TEXT(II+5:II+5)==' ') THEN
+               BACKSPACE(LU)
+               IOS = 0
+               EXIT READLOOP
+            ELSE
+               IF (MYID==0) WRITE(LU_ERR,'(/A,I0,A,A)') 'ERROR: Input line ',INPUT_FILE_LINE_NUMBER,&
+                                                      ' is not formatted properly; NAMELIST: ',NAME
+               STOP_STATUS = SETUP_STOP
+               IOS = 1
+               EXIT READLOOP
+            ENDIF
          ELSE
             CYCLE READLOOP
          ENDIF
@@ -275,6 +283,9 @@ SELECT CASE (SPATIAL_STATISTIC)
       I=1
    CASE ('AREA','SURFACE AREA')
       NEW_UNITS = 'm2'
+      I=1
+   CASE ('MINLOC X','MINLOC Y','MINLOC Z','MAXLOC X','MAXLOC Y','MAXLOC Z')
+      NEW_UNITS = 'm'
       I=1
 END SELECT
 
@@ -1111,12 +1122,18 @@ OTHER_MESH_LOOP: DO NOM=1,NMESHES
    IF (EVACUATION_ONLY(NOM)) CYCLE OTHER_MESH_LOOP
    M2=>MESHES(NOM)
    IF (XX>=M2%XS .AND. XX<=M2%XF .AND.  YY>=M2%YS .AND. YY<=M2%YF .AND. ZZ>=M2%ZS .AND. ZZ<=M2%ZF) THEN
-      XI  = MAX( 1._EB , MIN( REAL(M2%IBAR,EB)+ALMOST_ONE , M2%CELLSI(FLOOR((XX-M2%XS)*M2%RDXINT)) + 1._EB ) )
-      YJ  = MAX( 1._EB , MIN( REAL(M2%JBAR,EB)+ALMOST_ONE , M2%CELLSJ(FLOOR((YY-M2%YS)*M2%RDYINT)) + 1._EB ) )
-      ZK  = MAX( 1._EB , MIN( REAL(M2%KBAR,EB)+ALMOST_ONE , M2%CELLSK(FLOOR((ZZ-M2%ZS)*M2%RDZINT)) + 1._EB ) )
-      IIO = FLOOR(XI)
-      JJO = FLOOR(YJ)
-      KKO = FLOOR(ZK)
+      IF (ALLOCATED(M2%CELLSI)) THEN
+         XI  = MAX( 1._EB , MIN( REAL(M2%IBAR,EB)+ALMOST_ONE , M2%CELLSI(FLOOR((XX-M2%XS)*M2%RDXINT)) + 1._EB ) )
+         YJ  = MAX( 1._EB , MIN( REAL(M2%JBAR,EB)+ALMOST_ONE , M2%CELLSJ(FLOOR((YY-M2%YS)*M2%RDYINT)) + 1._EB ) )
+         ZK  = MAX( 1._EB , MIN( REAL(M2%KBAR,EB)+ALMOST_ONE , M2%CELLSK(FLOOR((ZZ-M2%ZS)*M2%RDZINT)) + 1._EB ) )
+         IIO = FLOOR(XI)
+         JJO = FLOOR(YJ)
+         KKO = FLOOR(ZK)
+      ELSE
+         IIO = 0  ! The mesh if found, but no detailed information is available to the current process
+         JJO = 0
+         KKO = 0
+      ENDIF
       RETURN
    ENDIF
 ENDDO OTHER_MESH_LOOP

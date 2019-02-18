@@ -1417,7 +1417,7 @@ ENDIF
 
 IF (MYID>0 .AND. APPEND) RETURN
 
-! In cases where the MPI processes write to their own .smv file, give each .smv file for the MPI processes 
+! In cases where the MPI processes write to their own .smv file, give each .smv file for the MPI processes
 ! greater than 0 a unique name.
 
 IF (MYID>0 .AND.      SHARED_FILE_SYSTEM) OPEN(LU_SMV,FILE=FN_SMV,FORM='FORMATTED', STATUS='OLD',POSITION='APPEND')
@@ -5473,8 +5473,8 @@ DEVICE_LOOP: DO N=1,N_DEVC
 
    SDV%VALUE_1 = 0._EB
    SDV%VALUE_2 = 0._EB
-   IF (DV%TEMPORAL_STATISTIC=='MAX' .OR. DV%SPATIAL_STATISTIC=='MAX') SDV%VALUE_1 = -HUGE(0.0_EB) + 1.0_EB
-   IF (DV%TEMPORAL_STATISTIC=='MIN' .OR. DV%SPATIAL_STATISTIC=='MIN') SDV%VALUE_1 =  HUGE(0.0_EB) - 1.0_EB
+   IF (DV%TEMPORAL_STATISTIC=='MAX' .OR. DV%SPATIAL_STATISTIC(1:3)=='MAX') SDV%VALUE_1 = -HUGE(0.0_EB) + 1.0_EB
+   IF (DV%TEMPORAL_STATISTIC=='MIN' .OR. DV%SPATIAL_STATISTIC(1:3)=='MIN') SDV%VALUE_1 =  HUGE(0.0_EB) - 1.0_EB
 
    ! Select hvac or gas phase or solid phase output quantity
 
@@ -5515,10 +5515,22 @@ DEVICE_LOOP: DO N=1,N_DEVC
                       WC%Z<SDV%Z1-MICRON .OR. WC%Z>SDV%Z2+MICRON) CYCLE WALL_CELL_LOOP
                   VALUE = SOLID_PHASE_OUTPUT(NM,ABS(DV%OUTPUT_INDEX),DV%Y_INDEX,DV%Z_INDEX,DV%PART_CLASS_INDEX,OPT_WALL_INDEX=IW)
                   SELECT CASE(DV%SPATIAL_STATISTIC)
-                     CASE('MAX')
-                        SDV%VALUE_1 = MAX(SDV%VALUE_1,VALUE)
-                     CASE('MIN')
-                        SDV%VALUE_1 = MIN(SDV%VALUE_1,VALUE)
+                     CASE('MAX','MAXLOC X','MAXLOC Y','MAXLOC Z')
+                        IF (VALUE>SDV%VALUE_1) THEN
+                           SDV%VALUE_1 = VALUE
+                           SDV%VALUE_2 = REAL(SDV%MESH,EB)
+                           IF (DV%SPATIAL_STATISTIC=='MAXLOC X') SDV%VALUE_3 = WC%X
+                           IF (DV%SPATIAL_STATISTIC=='MAXLOC Y') SDV%VALUE_3 = WC%Y
+                           IF (DV%SPATIAL_STATISTIC=='MAXLOC Z') SDV%VALUE_3 = WC%Z
+                        ENDIF
+                     CASE('MIN','MINLOC X','MINLOC Y','MINLOC Z')
+                        IF (VALUE<SDV%VALUE_1) THEN
+                           SDV%VALUE_1 = VALUE
+                           SDV%VALUE_2 = REAL(SDV%MESH,EB)
+                           IF (DV%SPATIAL_STATISTIC=='MINLOC X') SDV%VALUE_3 = WC%X
+                           IF (DV%SPATIAL_STATISTIC=='MINLOC Y') SDV%VALUE_3 = WC%Y
+                           IF (DV%SPATIAL_STATISTIC=='MINLOC Z') SDV%VALUE_3 = WC%Z
+                        ENDIF
                      CASE('MEAN')
                         SDV%VALUE_1 = SDV%VALUE_1 + VALUE
                         SDV%VALUE_2 = SDV%VALUE_2 + 1._EB
@@ -5548,10 +5560,22 @@ DEVICE_LOOP: DO N=1,N_DEVC
                   VALUE = SOLID_PHASE_OUTPUT(NM,ABS(DV%OUTPUT_INDEX),DV%Y_INDEX,DV%Z_INDEX,DV%PART_CLASS_INDEX,&
                      OPT_CFACE_INDEX=ICF)
                   SELECT CASE(DV%SPATIAL_STATISTIC)
-                     CASE('MAX')
-                        SDV%VALUE_1 = MAX(SDV%VALUE_1,VALUE)
-                     CASE('MIN')
-                        SDV%VALUE_1 = MIN(SDV%VALUE_1,VALUE)
+                     CASE('MAX','MAXLOC X','MAXLOC Y','MAXLOC Z')
+                        IF (VALUE>SDV%VALUE_1) THEN
+                           SDV%VALUE_1 = VALUE
+                           SDV%VALUE_2 = REAL(SDV%MESH,EB)
+                           IF (DV%SPATIAL_STATISTIC=='MAXLOC X') SDV%VALUE_3 = CFA%X
+                           IF (DV%SPATIAL_STATISTIC=='MAXLOC Y') SDV%VALUE_3 = CFA%Y
+                           IF (DV%SPATIAL_STATISTIC=='MAXLOC Z') SDV%VALUE_3 = CFA%Z
+                        ENDIF
+                     CASE('MIN','MINLOC X','MINLOC Y','MINLOC Z')
+                        IF (VALUE<SDV%VALUE_1) THEN
+                           SDV%VALUE_1 = VALUE
+                           SDV%VALUE_2 = REAL(SDV%MESH,EB)
+                           IF (DV%SPATIAL_STATISTIC=='MINLOC X') SDV%VALUE_3 = CFA%X
+                           IF (DV%SPATIAL_STATISTIC=='MINLOC Y') SDV%VALUE_3 = CFA%Y
+                           IF (DV%SPATIAL_STATISTIC=='MINLOC Z') SDV%VALUE_3 = CFA%Z
+                        ENDIF
                      CASE('MEAN')
                         SDV%VALUE_1 = SDV%VALUE_1 + VALUE
                         SDV%VALUE_2 = SDV%VALUE_2 + 1._EB
@@ -5599,10 +5623,22 @@ DEVICE_LOOP: DO N=1,N_DEVC
                         VALUE = GAS_PHASE_OUTPUT(I,J,K,DV%OUTPUT_INDEX,0,DV%Y_INDEX,DV%Z_INDEX,DV%PART_CLASS_INDEX,DV%VELO_INDEX,&
                                                  DV%PIPE_INDEX,DV%PROP_INDEX,DV%REAC_INDEX,DV%MATL_INDEX,T,DT,NM)
                         STATISTICS_SELECT: SELECT CASE(DV%SPATIAL_STATISTIC)
-                           CASE('MAX')
-                              SDV%VALUE_1 = MAX(SDV%VALUE_1,VALUE)
-                           CASE('MIN')
-                              SDV%VALUE_1 = MIN(SDV%VALUE_1,VALUE)
+                           CASE('MAX','MAXLOC X','MAXLOC Y','MAXLOC Z')
+                              IF (VALUE>SDV%VALUE_1) THEN
+                                 SDV%VALUE_1 = VALUE
+                                 SDV%VALUE_2 = REAL(SDV%MESH,EB)
+                                 IF (DV%SPATIAL_STATISTIC=='MAXLOC X') SDV%VALUE_3 = XC(I)
+                                 IF (DV%SPATIAL_STATISTIC=='MAXLOC Y') SDV%VALUE_3 = YC(J)
+                                 IF (DV%SPATIAL_STATISTIC=='MAXLOC Z') SDV%VALUE_3 = ZC(K)
+                              ENDIF
+                           CASE('MIN','MINLOC X','MINLOC Y','MINLOC Z')
+                              IF (VALUE<SDV%VALUE_1) THEN
+                                 SDV%VALUE_1 = VALUE
+                                 SDV%VALUE_2 = REAL(SDV%MESH,EB)
+                                 IF (DV%SPATIAL_STATISTIC=='MINLOC X') SDV%VALUE_3 = XC(I)
+                                 IF (DV%SPATIAL_STATISTIC=='MINLOC Y') SDV%VALUE_3 = YC(J)
+                                 IF (DV%SPATIAL_STATISTIC=='MINLOC Z') SDV%VALUE_3 = ZC(K)
+                              ENDIF
                            CASE('MEAN')
                               SDV%VALUE_1 = SDV%VALUE_1 + VALUE
                               SDV%VALUE_2 = SDV%VALUE_2 + 1._EB
@@ -6232,6 +6268,8 @@ IND_SELECT: SELECT CASE(IND)
       SS = GAS_PHASE_OUTPUT(II,JJ,KK,84,IND2,Y_INDEX,Z_INDEX,PART_INDEX,VELO_INDEX,PIPE_INDEX,PROP_INDEX,&
                             REAC_INDEX,MATL_INDEX,T,DT,NM)
       GAS_PHASE_OUTPUT_RES = MU(II,JJ,KK)/RHO(II,JJ,KK)*SS**2
+   CASE(89)  ! KINEMATIC VISCOSITY
+      GAS_PHASE_OUTPUT_RES = MU(II,JJ,KK)/RHO(II,JJ,KK)
    CASE(90)  ! MASS FRACTION
       GAS_PHASE_OUTPUT_RES = Y_SPECIES/(1._EB-Y_H2O)
    CASE(91:93) ! MASS FLUX
@@ -6988,6 +7026,12 @@ IND_SELECT: SELECT CASE(IND)
       ENDIF
    CASE(523)  ! ABSOLUTE PRESSURE
       GAS_PHASE_OUTPUT_RES  = PBAR(KK,PRESSURE_ZONE(II,JJ,KK)) + RHO(II,JJ,KK)*(H(II,JJ,KK)-KRES(II,JJ,KK))
+   CASE(524)  ! TURBULENT PRANDTL NUMBER
+      IF (POTENTIAL_TEMPERATURE_CORRECTION) THEN
+         GAS_PHASE_OUTPUT_RES = PR_T(II,JJ,KK)
+      ELSE
+         GAS_PHASE_OUTPUT_RES = PR
+      ENDIF
 
 END SELECT IND_SELECT
 
@@ -7703,9 +7747,9 @@ REAL(EB) FUNCTION HVAC_OUTPUT(IND,Y_INDEX,Z_INDEX,DUCT_INDEX,NODE_INDEX,DUCT_CEL
 ! Compute HVAC Output Quantities
 
 USE MATH_FUNCTIONS, ONLY: INTERPOLATE1D,EVALUATE_RAMP
-USE PHYSICAL_FUNCTIONS, ONLY: GET_MASS_FRACTION,GET_MOLECULAR_WEIGHT
+USE PHYSICAL_FUNCTIONS, ONLY: GET_MASS_FRACTION,GET_MOLECULAR_WEIGHT,GET_ENTHALPY
 INTEGER, INTENT(IN) :: Y_INDEX,Z_INDEX,IND,DUCT_INDEX,NODE_INDEX(2),DUCT_CELL_INDEX
-REAL(EB) :: Y_H2O,ZZ_GET(1:N_TRACKED_SPECIES),MW,Y_SPECIES,RCON
+REAL(EB) :: Y_H2O,ZZ_GET(1:N_TRACKED_SPECIES),MW,Y_SPECIES,RCON,H_DUCT
 
 Y_H2O = 0._EB
 Y_SPECIES=1.0_EB
@@ -7791,6 +7835,10 @@ SELECT CASE(IND)
          CALL GET_MOLECULAR_WEIGHT(ZZ_GET,MW)
          HVAC_OUTPUT = RCON/R0*MW*Y_SPECIES/(1._EB-Y_H2O*MW/MW_H2O)
       ENDIF
+   CASE(311)  ! Duct Energy Flow
+      ZZ_GET(1:N_TRACKED_SPECIES) = DUCT(DUCT_INDEX)%ZZ
+      CALL GET_ENTHALPY(ZZ_GET,H_DUCT,DUCT(DUCT_INDEX)%TMP_D)
+      HVAC_OUTPUT = DUCT(DUCT_INDEX)%VEL(OLD)*DUCT(DUCT_INDEX)%RHO_D*DUCT(DUCT_INDEX)%AREA*H_DUCT*0.001_EB
    CASE(330) ! Node Pressure
       HVAC_OUTPUT = DUCTNODE(NODE_INDEX(1))%P
    CASE(331) ! Node Density
@@ -7815,6 +7863,10 @@ SELECT CASE(IND)
       HVAC_OUTPUT = DUCTNODE(NODE_INDEX(1))%FILTER_LOSS
    CASE(339) ! Fan Pressure
       HVAC_OUTPUT = DUCT(DUCT_INDEX)%DP_FAN(1)
+   CASE(340) ! Node Enhtalpy
+      ZZ_GET(1:N_TRACKED_SPECIES) = DUCTNODE(NODE_INDEX(1))%ZZ(1:N_TRACKED_SPECIES)
+      CALL GET_ENTHALPY(ZZ_GET,HVAC_OUTPUT,DUCTNODE(NODE_INDEX(1))%TMP)
+      HVAC_OUTPUT = HVAC_OUTPUT * 0.001_EB
 END SELECT
 
 END FUNCTION HVAC_OUTPUT
@@ -9090,7 +9142,7 @@ END SUBROUTINE GET_LAYER_HEIGHT_INTEGRALS
 SUBROUTINE COMPUTE_PARTICLE_FLUXES(NM)
 
 INTEGER, INTENT(IN) :: NM
-INTEGER :: II,JJ,KK,IP
+INTEGER :: II,JJ,KK,IP,IIG,JJG,KKG,IC,IW
 REAL(EB) :: DROPMASS,RVC
 
 CALL POINT_TO_MESH(NM)
@@ -9118,9 +9170,22 @@ DO IP=1,NLP
    WFZ(II,JJ,KK) = WFZ(II,JJ,KK) + DROPMASS*LP%W*RVC
 ENDDO
 
-WFX(:,:,0) = WFX(:,:,1)
-WFY(:,:,0) = WFY(:,:,1)
-WFZ(:,:,0) = WFZ(:,:,1)
+! Mirror the values at solid walls and mesh exterior
+
+DO IW=1,N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS
+   II  = WALL(IW)%ONE_D%II
+   JJ  = WALL(IW)%ONE_D%JJ
+   KK  = WALL(IW)%ONE_D%KK
+   IIG = WALL(IW)%ONE_D%IIG
+   JJG = WALL(IW)%ONE_D%JJG
+   KKG = WALL(IW)%ONE_D%KKG
+   IC  = CELL_INDEX(II,JJ,KK)
+   IF (SOLID(IC) .OR. EXTERIOR(IC)) THEN
+      WFX(II,JJ,KK) = WFX(IIG,JJG,KKG)
+      WFY(II,JJ,KK) = WFY(IIG,JJG,KKG)
+      WFZ(II,JJ,KK) = WFZ(IIG,JJG,KKG)
+   ENDIF
+ENDDO
 
 END SUBROUTINE COMPUTE_PARTICLE_FLUXES
 
