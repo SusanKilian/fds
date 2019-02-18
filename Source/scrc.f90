@@ -7278,16 +7278,16 @@ ITE_TOTAL = ITE_TOTAL + 1
 END SUBROUTINE SCARC_INCREASE_ITERATION_COUNTS
 
 !> ------------------------------------------------------------------------------------------------
-!> Perform global CG-method based on global possion-matrix
+!> Perform global CG-method based on global Possion-matrix
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_METHOD_CG(NSTACK, NPARENT, NLEVEL)
 INTEGER, INTENT(IN) :: NSTACK, NPARENT, NLEVEL           
 INTEGER   :: NSTATE, NS, NP, NL
 REAL (EB) :: SIGMA0, SIGMA1, ALPHA0, GAMMA0
-REAL (EB) :: TNOW
+REAL (EB) :: TNOW                                                                                       !>
 
 TNOW = CURRENT_TIME()
-
+!> test
 !> get current and parent stack position, and current level
 NS = NSTACK
 NP = NPARENT
