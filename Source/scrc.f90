@@ -6,8 +6,8 @@
 !>     - WITH_MKL           : use MKL routines PARDISO, CLUSTER_SPARSE_SOLVER, DDOT, DAXPBY, DCOPY, DSCAL
 !>     - WITH_MKL_FB        : perform MKL routines for LU-decomposition only in single precision
 !> --------------------------------------------------------------------------------------------------------
-#undef WITH_SCARC_VERBOSE
-#undef WITH_SCARC_DEBUG
+#define WITH_SCARC_VERBOSE
+#define WITH_SCARC_DEBUG
 #undef WITH_SCARC_CGBARO
 #undef WITH_MKL_FB
 
@@ -177,7 +177,7 @@ INTEGER, PARAMETER :: NSCARC_LU_LOCAL                =  1, &    !> local LU-deco
                       NSCARC_LU_COARSE               =  3       !> LU-decomposition on coarse grid level
 
 INTEGER, PARAMETER :: NSCARC_EXCHANGE_BASIC          =  1, &    !> initialize wall information
-                      NSCARC_EXCHANGE_WALL           =  2, &    !> initialize wall information
+                      NSCARC_EXCHANGE_WALL_INFO           =  2, &    !> initialize wall information
                       NSCARC_EXCHANGE_VECTOR         =  3, &    !> matrix-vector communication
                       NSCARC_EXCHANGE_PRESSURE       =  4, &    !> vector values along internal boundaries
                       NSCARC_EXCHANGE_CELL_INDEX     =  8, &    !> internal transfer weights
@@ -185,7 +185,7 @@ INTEGER, PARAMETER :: NSCARC_EXCHANGE_BASIC          =  1, &    !> initialize wa
                       NSCARC_EXCHANGE_CELL_NUMBER    = 21, &    !> neighboring mesh information
                       NSCARC_EXCHANGE_MATRIX_SIZE    = 12, &    !> neighboring matrix size
                       NSCARC_EXCHANGE_MATRIX_VALUE   = 14, &    !> neighboring matrix size
-                      NSCARC_EXCHANGE_DISCRETIZATION = 23       !> exchange discretization information
+                      NSCARC_EXCHANGE_GRID_INFO = 23       !> exchange discretization information
 
 INTEGER, PARAMETER :: NSCARC_BROADCAST_SUM          =  1, &    !> broadcast local value and deliver sum of all
                       NSCARC_BROADCAST_PRODUCT      =  2, &    !> broadcast local value and deliver product of all
@@ -2156,9 +2156,9 @@ IF (N_MPI_PROCESSES > 1) THEN
    NLMIN = NLEVEL_MIN
    NLMAX = NLEVEL_MAX
    DO NL = NLMIN, NLMAX
-      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_DISCRETIZATION, NL)
+      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_GRID_INFO, NL)
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_CELL_WIDTH, NL)
-!      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_WALL, NL)
+      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_WALL_INFO, NL)
    ENDDO
 ENDIF
 
@@ -9399,7 +9399,7 @@ RECEIVE_MESH_INDEX: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !> ---------------------------------------------------------------------------------------
          !> Exchange information about neighboring wall data
          !> ---------------------------------------------------------------------------------------
-         CASE (NSCARC_EXCHANGE_WALL)
+         CASE (NSCARC_EXCHANGE_WALL_INFO)
 
             N_REQ = N_REQ+1
             CALL MPI_IRECV(OS%RECV_INT(1),SIZE(OS%RECV_INT),MPI_INTEGER,SNODE, &
@@ -9408,7 +9408,7 @@ RECEIVE_MESH_INDEX: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !> ---------------------------------------------------------------------------------------
          !> Exchange information about neighboring wall data
          !> ---------------------------------------------------------------------------------------
-         CASE (NSCARC_EXCHANGE_DISCRETIZATION)
+         CASE (NSCARC_EXCHANGE_GRID_INFO)
 
             N_REQ = N_REQ+1
             OS%RECV_INT = 0
@@ -9505,7 +9505,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
       OMESH_PACK_SELECT: SELECT CASE (TYPE_EXCHANGE)
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_BASIC: pack neighboring sizes for exchange
+         !> send needed size of exchange vector
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_BASIC)
 
@@ -9518,7 +9518,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ENDIF
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_CELL_WIDTHS: pack neighboring grid resolution information
+         !> send overlapped parts of cell widths
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_CELL_WIDTH)
 
@@ -9545,7 +9545,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ENDIF
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_CELL_NUMBERS: pack neighboring mesh information
+         !> send overlapped parts of cell numbers
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_CELL_NUMBER)
 
@@ -9566,9 +9566,9 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_WALL_INFO: pack neighboring wallinfo information
+         !> send overlapped parts of wall information
          !> ---------------------------------------------------------------------------------------
-         CASE (NSCARC_EXCHANGE_WALL)
+         CASE (NSCARC_EXCHANGE_WALL_INFO)
 
             IPTR=1
             DO IWL = 1, OL%NWL
@@ -9600,9 +9600,9 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ENDIF
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_DISCRETIZATION: pack neighboring DISCRET information
+         !> send overlapped parts of grid information
          !> ---------------------------------------------------------------------------------------
-         CASE (NSCARC_EXCHANGE_DISCRETIZATION)
+         CASE (NSCARC_EXCHANGE_GRID_INFO)
 
             IPTR=1
             OS%SEND_INT=0
@@ -9622,8 +9622,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_PRESSURE: pack overlapping parts of a H or HS
-         ! (pressure vectors for PREDICTOR and CORRECTOR
+         !> send overapped parts of pressure vector (H or HS) from predictor/corrector
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_PRESSURE)
 
@@ -9651,7 +9650,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_VECTOR: pack overlapping parts of a given vector
+         !> send overapped parts of specified vector
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_VECTOR)
 
@@ -9684,7 +9683,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ENDIF
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_CELL_INDEX: pack cell indices of communication partners
+         !> send overapped cell indices
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_CELL_INDEX)
 
@@ -9712,7 +9711,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             ENDIF
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_MATRIX_VALUE: pack cell indices of communication partners
+         !> send overlapped values of neighboring matrix 
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_MATRIX_VALUE)
 
@@ -9747,7 +9746,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
 
          !> ---------------------------------------------------------------------------------------
-         !> EXCHANGE_MATRIX_SIZE: Send sizes of overlapping matrix areas
+         !> send size of neighboring matrix
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_MATRIX_SIZE)
 
@@ -9802,14 +9801,14 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          OMESH_UNPACK_SELECT: SELECT CASE (TYPE_EXCHANGE)
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_BASIC: unpack basic neighboring sizes for exchange
+            !> unpack information about neighboring exchange size
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_BASIC)
 
                OL%NCG  = RECV_INT_BASIC(1)
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_CELL_WIDTHS: unpack neighboring step size information
+            !> unpack information about neighboring cell widths
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_CELL_WIDTH)
 
@@ -9831,9 +9830,9 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                END SELECT
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_WALL_INFO: unpack neighboring wall information
+            !> unpack information about neighboring walls
             !> ------------------------------------------------------------------------------------
-            CASE (NSCARC_EXCHANGE_WALL)
+            CASE (NSCARC_EXCHANGE_WALL_INFO)
                IPTR=1
                DO ICG = 1, OL%NCG
                   OL%WALL(ICG)%IXG    = RECV_INT(IPTR    )
@@ -9858,9 +9857,9 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDDO
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_DISCRETIZATION: unpack neighboring DISCRET information
+            !> unpack information about neighboring grids
             !> ------------------------------------------------------------------------------------
-            CASE (NSCARC_EXCHANGE_DISCRETIZATION)
+            CASE (NSCARC_EXCHANGE_GRID_INFO)
                IPTR=1
                DO ICG = 1, OL%NCG
 
@@ -9880,15 +9879,15 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
                   !IF (OL%WALL(ICG)%STATE == NSCARC_CELL_GASPHASE.AND.L%CELL_STATE(IXW,IYW,IZW)/=NSCARC_CELL_SOLID) THEN
                   IF (OL%WALL(ICG)%STATE == NSCARC_CELL_GASPHASE) THEN
-                     L%CELL_STATE(IXG, IYG, IZG) = OL%WALL(ICG)%STATE
-                     L%CELL_NUMBER(IXG, IYG, IZG)   = OL%WALL(ICG)%DOF
+                     L%CELL_STATE(IXG, IYG, IZG)  = OL%WALL(ICG)%STATE
+                     L%CELL_NUMBER(IXG, IYG, IZG) = OL%WALL(ICG)%DOF
                   ENDIF
 
                ENDDO
 
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_WALL_INFO: unpack neighboring mesh information
+            !> unpack information about neighboring cell numbers
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_CELL_NUMBER)
 
@@ -9902,7 +9901,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                OL%N_WALL_CELLS_INT = RECV_INT_BASIC(8)
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_WALL_INFO: unpack neighboring matrix size information
+            !> unpack information about neighboring matrix sizes
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_MATRIX_SIZE)
 
@@ -9914,8 +9913,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                END SELECT
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_PRESSURE: unpack overlapping parts of a H or HS
-            ! (pressure vectors for PREDICTOR and CORRECTOR
+            !> unpack overlapping parts of pressure vectors H or HS from predictor/corrector
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_PRESSURE)
 
@@ -9950,7 +9948,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDDO
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_VECTOR: unpack overlapping parts of a given vector
+            !> unpack overlapping parts of a specified vector
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_VECTOR)
 
@@ -9975,7 +9973,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDDO
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_CELL_INDEX: unpack cell indices of communication partners
+            !> unpack information about neighboring cell indices
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_CELL_INDEX)
 
@@ -9996,7 +9994,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
                ENDDO
 
             !> ------------------------------------------------------------------------------------
-            !> EXCHANGE_MATRIX_VALUE: unpack offdiagonal entry of matrix for condensed system
+            !> unpack information about neighboring matrix values
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_MATRIX_VALUE)
 
