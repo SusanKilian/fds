@@ -1,4 +1,4 @@
-&HEAD CHID='gmg4',TITLE='ScaRC-GMG for 2D-square with obstruction on 8 meshes' /
+&HEAD CHID='gmg4',TITLE='ScaRC-GMG for 2D-square with obstruction on 8 meshes ' /  
 
 &MESH IJK=4,1,4, XB=0.0,0.4,-0.01,0.01,0.0,0.4 /
 &MESH IJK=4,1,4, XB=0.4,0.8,-0.01,0.01,0.0,0.4 /
