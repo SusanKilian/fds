@@ -9427,7 +9427,6 @@ RECEIVE_MESH_INDEX: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_WALL_INFO)
 
-WRITE(*,*) 'RECEIVE WALL_INFO'
             N_REQ = N_REQ+1
             CALL MPI_IRECV(OS%RECV_INT(1),SIZE(OS%RECV_INT),MPI_INTEGER,SNODE, &
                            TAG,MPI_COMM_WORLD,REQ(N_REQ),IERROR)
@@ -9597,7 +9596,6 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_WALL_INFO)
 
-WRITE(*,*) 'PACK WALL_INFO'
             IPTR=1
             DO IWL = 1, OL%NWL
                IWG = OL%MAP%IWL_TO_IWG(IWL)
@@ -9802,6 +9800,7 @@ IF (N_MPI_PROCESSES>1.AND.N_REQ/=0) &
 MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
 
    S => SCARC(NM)
+   L => SCARC(NM)%LEVEL(NL)
 
    OMESH_UNPACK_LOOP: DO NOM=1,NMESHES
 
@@ -9861,7 +9860,6 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             !> unpack information about neighboring walls
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_WALL_INFO)
-WRITE(*,*) 'UNPACK WALL_INFO'
                IPTR=1
                DO ICG = 1, OL%NCG
                   OL%WALL(ICG)%IXG    = RECV_INT(IPTR    )
