@@ -1,20 +1,18 @@
-&HEAD CHID='gmg4',TITLE='ScaRC-GMG for 2D-square with obstruction on 8 meshes' /
+&HEAD CHID='cggmg1',TITLE='ScaRC-GMG for 2D-square with obstruction on 8 meshes' /
 
-&MESH IJK=4,1,4, XB=0.0,0.4,-0.01,0.01,0.0,0.4 /
-&MESH IJK=4,1,4, XB=0.4,0.8,-0.01,0.01,0.0,0.4 /
-&MESH IJK=4,1,4, XB=0.0,0.4,-0.01,0.01,0.4,0.8 /
-&MESH IJK=4,1,4, XB=0.4,0.8,-0.01,0.01,0.4,0.8 /
-
- MESH IJK=8,1,16, XB=0.0,0.2,-0.01,0.01,0.0,0.4, MULT_ID='mesh' /
- MULT ID='mesh', DX=0.2, DY=0.02, DZ=0.4, I_UPPER=3, J_UPPER=0, K_UPPER=1 /
+&MESH IJK=8,1,8, XB=0.0,0.8,-0.01,0.01,0.0,0.8 /
 
 &MISC NOISE = .FALSE. 
       DNS   = .TRUE./
 
-&PRES SOLVER                  = 'SCARC'
-      SCARC_METHOD            = 'MULTIGRID'
-      SCARC_MULTIGRID_LEVEL   =   2
-      SCARC_SMOOTH_ITERATIONS =   2           /
+&PRES SOLVER                     = 'SCARC'
+      SCARC_METHOD               = 'KRYLOV'
+      SCARC_KRYLOV               = 'CG'
+      SCARC_PRECON               = 'MULTIGRID'
+      SCARC_SMOOTH               = 'JACOBI'
+      SCARC_MULTIGRID_LEVEL      =   2
+      SCARC_MULTIGRID_ITERATIONS =   2
+      SCARC_SMOOTH_ITERATIONS    =   5        /
 
 &TIME T_END=0.5, DT=0.002 /
 
