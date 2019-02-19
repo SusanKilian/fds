@@ -6,7 +6,7 @@
 !>     - WITH_MKL           : use MKL routines PARDISO, CLUSTER_SPARSE_SOLVER, DDOT, DAXPBY, DCOPY, DSCAL
 !>     - WITH_MKL_FB        : perform MKL routines for LU-decomposition only in single precision
 !> --------------------------------------------------------------------------------------------------------
-#define WITH_SCARC_VERBOSE
+#undef WITH_SCARC_VERBOSE
 #define WITH_SCARC_DEBUG
 #undef WITH_SCARC_CGBARO
 #undef WITH_MKL_FB
@@ -944,7 +944,7 @@ END SUBROUTINE SCARC_SETUP_TIMING
 !> Setup debug file if requested
 !> ------------------------------------------------------------------------------------------------
 SUBROUTINE SCARC_SETUP_MESSAGING
-#ifdef WITH_SCARC_VERBOSE
+#if defined(WITH_SCARC_VERBOSE) || defined(WITH_SCARC_DEBUG)
 INTEGER:: NM, LASTID
 #endif
 
@@ -7453,7 +7453,7 @@ CALL SCARC_SETUP_SOLVER(NS, NP)
 CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
 #ifdef WITH_SCARC_DEBUG
-CALL SCARC_DEBUG_LEVEL (X, 'BARO: X INIT0', NL)
+CALL SCARC_DEBUG_LEVEL (X, 'X INIT0', NL)
 CALL SCARC_DEBUG_LEVEL (B, 'B INIT0', NL)
 #endif
 
@@ -8156,6 +8156,11 @@ NL = NLEVEL
 CALL SCARC_SETUP_SOLVER(NS, NP)
 CALL SCARC_SETUP_WORKSPACE(NS, NL)
 
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'X INIT0', NL)
+CALL SCARC_DEBUG_LEVEL (B, 'B INIT0', NL)
+#endif
+
 !> ------------------------------------------------------------------------------------------------
 !> Compute initial defect:  RESIN := || B - A*X ||
 !>   - Initialize cycle counts for MG-iteration
@@ -8164,6 +8169,10 @@ CALL SCARC_SETUP_WORKSPACE(NS, NL)
 !> ------------------------------------------------------------------------------------------------
 CALL SCARC_MATVEC_PRODUCT (X, V, NS, NL)                              !>  V := A*X
 CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                     !>  V := B - V
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (V, 'V INIT0', NL)
+#endif
 
 ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_SETUP, NL)
 
@@ -8181,7 +8190,9 @@ MULTIGRID_LOOP: DO ITE = 1, NIT
 
    CYCLE_LOOP: DO WHILE (ICYCLE /= NSCARC_CYCLING_EXIT)
 
-      !> presmoothing  (smoothing/restriction till coarsest level is reached)
+      !>
+      !> Presmoothing  (smoothing/restriction till coarsest level is reached)
+      !>
       PRESMOOTHING_LOOP: DO WHILE (NL < NLEVEL_MAX)
          CALL SCARC_SMOOTHER (NSCARC_CYCLING_PRESMOOTH, NS+1, NS, NL)         !> D_fine   := smooth(defect)
          CALL SCARC_RESTRICTION (V, B, NL, NL+1)                              !> F_coarse := rest(D_fine)
@@ -8189,13 +8200,17 @@ MULTIGRID_LOOP: DO ITE = 1, NIT
          NL = NL + 1                                                          !> set coarser level
       ENDDO PRESMOOTHING_LOOP
 
-      !> coarse grid solver
+      !>
+      !> Coarse grid solver
+      !>
       TNOW_COARSE = CURRENT_TIME()
       CALL SCARC_METHOD_COARSE(NS+2, NS, NLEVEL_MAX)                          !> X_coarse := exact_sol(.)
       TSTEP(MYID+1)%COARSE=MAX(TSTEP(MYID+1)%COARSE,CURRENT_TIME()-TNOW_COARSE)
       TSUM(MYID+1)%COARSE =TSUM(MYID+1)%COARSE+CURRENT_TIME()-TNOW_COARSE
 
-      !> postsmoothing (smoothing/restriction till finest level is reached again)
+      !>
+      !> Postsmoothing (smoothing/restriction till finest level is reached again)
+      !>
       POSTSMOOTHING_LOOP: DO WHILE (NL > NLEVEL_MIN)
          NL=NL-1
          CALL SCARC_PROLONGATION (X, V, NL+1, NL)                             !> V_fine := prol(X_coarse)
@@ -8218,6 +8233,13 @@ MULTIGRID_LOOP: DO ITE = 1, NIT
    CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                          !> V := F - V
 
    RES = SCARC_L2NORM (V, NL)                                                 !> RES := ||V||
+
+#ifdef WITH_SCARC_DEBUG
+CALL SCARC_DEBUG_LEVEL (X, 'X ITE', NL)
+CALL SCARC_DEBUG_LEVEL (V, 'V ITE', NL)
+WRITE(MSG%LU_DEBUG,1000) 'SCARC_MG-Iteration','ITE',ITE,'Residual=',RES
+#endif
+
 
 #ifdef WITH_SCARC_VERBOSE
    IF (MYID == 0) WRITE(LU_OUTPUT,1000) 'SCARC_MG-Iteration','ITE',ITE,'Residual=',RES
