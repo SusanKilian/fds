@@ -177,113 +177,112 @@ INTEGER, PARAMETER :: NSCARC_LU_LOCAL                =  1, &    !> local LU-deco
                       NSCARC_LU_COARSE               =  3       !> LU-decomposition on coarse grid level
 
 INTEGER, PARAMETER :: NSCARC_EXCHANGE_BASIC          =  1, &    !> initialize wall information
-                      NSCARC_EXCHANGE_WALL_INFO           =  2, &    !> initialize wall information
-                      NSCARC_EXCHANGE_VECTOR         =  3, &    !> matrix-vector communication
-                      NSCARC_EXCHANGE_PRESSURE       =  4, &    !> vector values along internal boundaries
-                      NSCARC_EXCHANGE_CELL_INDEX     =  8, &    !> internal transfer weights
-                      NSCARC_EXCHANGE_CELL_WIDTH     = 20, &    !> neighboring grid resolution
-                      NSCARC_EXCHANGE_CELL_NUMBER    = 21, &    !> neighboring mesh information
-                      NSCARC_EXCHANGE_MATRIX_SIZE    = 12, &    !> neighboring matrix size
-                      NSCARC_EXCHANGE_MATRIX_VALUE   = 14, &    !> neighboring matrix size
-                      NSCARC_EXCHANGE_GRID_INFO = 23       !> exchange discretization information
+                      NSCARC_EXCHANGE_VECTOR         =  2, &    !> matrix-vector communication
+                      NSCARC_EXCHANGE_PRESSURE       =  3, &    !> vector values along internal boundaries
+                      NSCARC_EXCHANGE_GRID_INFO      =  4, &    !> exchange discretization information
+                      NSCARC_EXCHANGE_WALL_INFO      =  5, &    !> initialize wall information
+                      NSCARC_EXCHANGE_CELL_INDEX     =  6, &    !> internal transfer weights
+                      NSCARC_EXCHANGE_CELL_WIDTH     =  7, &    !> neighboring grid resolution
+                      NSCARC_EXCHANGE_CELL_NUMBER    =  8, &    !> neighboring mesh information
+                      NSCARC_EXCHANGE_MATRIX_SIZE    =  9, &    !> neighboring matrix size
+                      NSCARC_EXCHANGE_MATRIX_VALUE   = 10       !> neighboring matrix size
 
-INTEGER, PARAMETER :: NSCARC_BROADCAST_SUM          =  1, &    !> broadcast local value and deliver sum of all
-                      NSCARC_BROADCAST_PRODUCT      =  2, &    !> broadcast local value and deliver product of all
-                      NSCARC_BROADCAST_MEAN         =  3, &    !> broadcast local value and deliver mean of all
-                      NSCARC_BROADCAST_FIRST        =  4, &    !> broadcast local value and deliver first
-                      NSCARC_BROADCAST_LAST         =  5       !> broadcast local value and deliver last
+INTEGER, PARAMETER :: NSCARC_BROADCAST_SUM          =  1, &     !> broadcast local value and deliver sum of all
+                      NSCARC_BROADCAST_PRODUCT      =  2, &     !> broadcast local value and deliver product of all
+                      NSCARC_BROADCAST_MEAN         =  3, &     !> broadcast local value and deliver mean of all
+                      NSCARC_BROADCAST_FIRST        =  4, &     !> broadcast local value and deliver first
+                      NSCARC_BROADCAST_LAST         =  5        !> broadcast local value and deliver last
 
-INTEGER, PARAMETER :: NSCARC_DEFCOR_JACOBI          =  1, &    !> preconditioning by local JACOBI-methods
-                      NSCARC_DEFCOR_SSOR            =  2, &    !> preconditioning by local SSOR-methods
-                      NSCARC_DEFCOR_FFT             =  3, &    !> preconditioning by local FFT-methods
-                      NSCARC_DEFCOR_GMG             =  4, &    !> preconditioning by local GMG-methods
-                      NSCARC_DEFCOR_LU              =  5       !> preconditioning by local LU-decompositions
-
+INTEGER, PARAMETER :: NSCARC_DEFCOR_JACOBI          =  1, &     !> preconditioning by local JACOBI-methods
+                      NSCARC_DEFCOR_SSOR            =  2, &     !> preconditioning by local SSOR-methods
+                      NSCARC_DEFCOR_FFT             =  3, &     !> preconditioning by local FFT-methods
+                      NSCARC_DEFCOR_GMG             =  4, &     !> preconditioning by local GMG-methods
+                      NSCARC_DEFCOR_LU              =  5        !> preconditioning by local LU-decompositions
+ 
 INTEGER, PARAMETER :: NSCARC_SCOPE_GLOBAL           =  1, &    !> scope of defect correction is global
                       NSCARC_SCOPE_LOCAL            =  2       !> scope of defect correction is local
 
-INTEGER, PARAMETER :: NSCARC_TWOLEVEL_NONE           =  0, &   !> no two levels, only one level
-                      NSCARC_TWOLEVEL_ADD            =  1, &   !> additive 2-level method
-                      NSCARC_TWOLEVEL_MUL            =  2, &   !> multiplicative 2-level method
-                      NSCARC_TWOLEVEL_MUL2           =  3, &   !> multiplicative 2-level method
-                      NSCARC_TWOLEVEL_COARSE         =  4      !> only coarse grid
+INTEGER, PARAMETER :: NSCARC_TWOLEVEL_NONE          =  0, &   !> no two levels, only one level
+                      NSCARC_TWOLEVEL_ADD           =  1, &   !> additive 2-level method
+                      NSCARC_TWOLEVEL_MUL           =  2, &   !> multiplicative 2-level method
+                      NSCARC_TWOLEVEL_MUL2          =  3, &   !> multiplicative 2-level method
+                      NSCARC_TWOLEVEL_COARSE        =  4      !> only coarse grid
 
-INTEGER, PARAMETER :: NSCARC_CYCLING_F               =  0, &   !> F-cycle for mg-method
-                      NSCARC_CYCLING_V               =  1, &   !> V-cycle for mg-method
-                      NSCARC_CYCLING_W               =  2, &   !> W-cycle for mg-method
-                      NSCARC_CYCLING_SETUP           =  3, &   !> initialize cycle counts
-                      NSCARC_CYCLING_RESET           =  4, &   !> reset cycle counts
-                      NSCARC_CYCLING_PROCEED         =  5, &   !> proceed cycle counts
-                      NSCARC_CYCLING_NEXT            =  6, &   !> perform next cycling loop
-                      NSCARC_CYCLING_EXIT            =  7, &   !> exit cycling loop
-                      NSCARC_CYCLING_PRESMOOTH       = -1, &   !> presmoothing cycle
-                      NSCARC_CYCLING_POSTSMOOTH      =  1      !> postsmoothing cycle
+INTEGER, PARAMETER :: NSCARC_CYCLING_F              =  0, &   !> F-cycle for mg-method
+                      NSCARC_CYCLING_V              =  1, &   !> V-cycle for mg-method
+                      NSCARC_CYCLING_W              =  2, &   !> W-cycle for mg-method
+                      NSCARC_CYCLING_SETUP          =  3, &   !> initialize cycle counts
+                      NSCARC_CYCLING_RESET          =  4, &   !> reset cycle counts
+                      NSCARC_CYCLING_PROCEED        =  5, &   !> proceed cycle counts
+                      NSCARC_CYCLING_NEXT           =  6, &   !> perform next cycling loop
+                      NSCARC_CYCLING_EXIT           =  7, &   !> exit cycling loop
+                      NSCARC_CYCLING_PRESMOOTH      = -1, &   !> presmoothing cycle
+                      NSCARC_CYCLING_POSTSMOOTH     =  1      !> postsmoothing cycle
 
-INTEGER, PARAMETER :: NSCARC_STATE_PROCEED           =  0, &   !> proceed loop
-                      NSCARC_STATE_CONV0             =  1, &   !> check convergence already for initial residual
-                      NSCARC_STATE_CONV              =  2, &   !> check convergence for residual
-                      NSCARC_STATE_DIVG              =  3      !> check divergence for residual
+INTEGER, PARAMETER :: NSCARC_STATE_PROCEED          =  0, &   !> proceed loop
+                      NSCARC_STATE_CONV0            =  1, &   !> check convergence already for initial residual
+                      NSCARC_STATE_CONV             =  2, &   !> check convergence for residual
+                      NSCARC_STATE_DIVG             =  3      !> check divergence for residual
 
+INTEGER, PARAMETER :: NSCARC_DEBUG_MATRIX           =  1, &   !> show matrix
+                      NSCARC_DEBUG_MATRIXS          =  2, &   !> show symmetric matrix
+                      NSCARC_DEBUG_WALLINFO         =  3, &   !> show wall information
+                      NSCARC_DEBUG_FACEINFO         =  4, &   !> show face information
+                      NSCARC_DEBUG_BC_INDEX         =  5, &   !> show pressure_bc_index
+                      NSCARC_DEBUG_GRIDINFO         =  6, &   !> show discretization information
+                      NSCARC_DEBUG_SUBDIVISION      =  7, &   !> show subdivision
+                      NSCARC_DEBUG_STACK            =  8      !> show stack information 
 
-INTEGER, PARAMETER :: NSCARC_DEBUG_MATRIX            =  1, &   !> show matrix
-                      NSCARC_DEBUG_MATRIXS           =  2, &   !> show symmetric matrix
-                      NSCARC_DEBUG_WALLINFO          =  3, &   !> show wall information
-                      NSCARC_DEBUG_FACEINFO          =  4, &   !> show face information
-                      NSCARC_DEBUG_BC_INDEX          =  5, &   !> show pressure_bc_index
-                      NSCARC_DEBUG_GRIDINFO          =  6, &   !> show discretization information
-                      NSCARC_DEBUG_SUBDIVISION       =  7, &   !> show subdivision
-                      NSCARC_DEBUG_STACK             =  8      !> show stack information 
+INTEGER, PARAMETER :: NSCARC_COARSENING_BASIC       =  1, &   !> basic coarsening
+                      NSCARC_COARSENING_FALGOUT     =  2, &   !> parallel Falgout
+                      NSCARC_COARSENING_RS3         =  3, &   !> parallel RS3
+                      NSCARC_COARSENING_A1          =  4, &   !> aggressive 1 (path =1, length =2)
+                      NSCARC_COARSENING_A2          =  5, &   !> aggressive 2 (path =2, length =2)
+                      NSCARC_COARSENING_BDRY        =  6      !> FDSA2  : FDS variant similar to A2
 
-INTEGER, PARAMETER :: NSCARC_COARSENING_BASIC        =  1, &   !> basic coarsening
-                      NSCARC_COARSENING_FALGOUT      =  2, &   !> parallel Falgout
-                      NSCARC_COARSENING_RS3          =  3, &   !> parallel RS3
-                      NSCARC_COARSENING_A1           =  4, &   !> aggressive 1 (path =1, length =2)
-                      NSCARC_COARSENING_A2           =  5, &   !> aggressive 2 (path =2, length =2)
-                      NSCARC_COARSENING_BDRY         =  6      !> FDSA2  : FDS variant similar to A2
+INTEGER, PARAMETER :: NSCARC_COARSE_ITERATIVE       =  1, &   !> iterative solution of coarse grid problem
+                      NSCARC_COARSE_DIRECT          =  2, &   !> direct solution of coarse grid problem
+                      NSCARC_COARSE_KRYLOV          =  3, &   !> direct solution of coarse grid problem
+                      NSCARC_COARSE_PARDISO         =  4, &   !> direct solution of coarse grid problem
+                      NSCARC_COARSE_CLUSTER         =  5      !> direct solution of coarse grid problem
 
-INTEGER, PARAMETER :: NSCARC_COARSE_ITERATIVE        =  1, &   !> iterative solution of coarse grid problem
-                      NSCARC_COARSE_DIRECT           =  2, &   !> direct solution of coarse grid problem
-                      NSCARC_COARSE_KRYLOV           =  3, &   !> direct solution of coarse grid problem
-                      NSCARC_COARSE_PARDISO          =  4, &   !> direct solution of coarse grid problem
-                      NSCARC_COARSE_CLUSTER          =  5      !> direct solution of coarse grid problem
+INTEGER, PARAMETER :: NSCARC_SIZE_MATRIX            =  1, &   !> size of system matrix for compact system
+                      NSCARC_SIZE_TRANSFER          =  2      !> size of transfer matrices for compact system
 
-INTEGER, PARAMETER :: NSCARC_SIZE_MATRIX             =  1, &   !> size of system matrix for compact system
-                      NSCARC_SIZE_TRANSFER           =  2      !> size of transfer matrices for compact system
+INTEGER, PARAMETER :: NSCARC_SOLVER_MAIN            =  1, &   !> Krylov solver as main solver
+                      NSCARC_SOLVER_PRECON          =  2, &   !> Multigrid solver as main solver
+                      NSCARC_SOLVER_SMOOTH          =  3, &   !> Cluster sparse solver as main solver
+                      NSCARC_SOLVER_COARSE          =  4      !> Cluster sparse solver as main solver
 
-INTEGER, PARAMETER :: NSCARC_SOLVER_MAIN             =  1, &   !> Krylov solver as main solver
-                      NSCARC_SOLVER_PRECON           =  2, &   !> Multigrid solver as main solver
-                      NSCARC_SOLVER_SMOOTH           =  3, &   !> Cluster sparse solver as main solver
-                      NSCARC_SOLVER_COARSE           =  4      !> Cluster sparse solver as main solver
+INTEGER, PARAMETER :: NSCARC_VECTOR_ONE_X           =  1, &   !> selection parameter for 1-stage vector X
+                      NSCARC_VECTOR_ONE_B           =  2, &   !> selection parameter for 1-stage vector F
+                      NSCARC_VECTOR_ONE_Q           =  3, &   !> selection parameter for 1-stage vector G
+                      NSCARC_VECTOR_ONE_V           =  4, &   !> selection parameter for 1-stage vector D
+                      NSCARC_VECTOR_ONE_W           =  5, &   !> selection parameter for 1-stage vector R
+                      NSCARC_VECTOR_ONE_Y           =  6, &   !> selection parameter for 1-stage vector Y
+                      NSCARC_VECTOR_ONE_Z           =  7, &   !> selection parameter for 1-stage vector Z
+                      NSCARC_VECTOR_ONE_E           =  8, &   !> selection parameter for 1-stage vector Z
+                      NSCARC_VECTOR_TWO_X           =  9, &   !> selection parameter for 2-stage vector X
+                      NSCARC_VECTOR_TWO_B           = 10, &   !> selection parameter for 2-stage vector F
+                      NSCARC_VECTOR_TWO_Q           = 11, &   !> selection parameter for 2-stage vector G
+                      NSCARC_VECTOR_TWO_V           = 12, &   !> selection parameter for 2-stage vector D
+                      NSCARC_VECTOR_TWO_W           = 13, &   !> selection parameter for 2-stage vector R
+                      NSCARC_VECTOR_TWO_Y           = 14, &   !> selection parameter for 2-stage vector Y
+                      NSCARC_VECTOR_TWO_Z           = 15, &   !> selection parameter for 2-stage vector Z
+                      NSCARC_VECTOR_TWO_E           = 16, &   !> selection parameter for 2-stage vector Z
+                      NSCARC_VECTOR_H               = 17, &   !> selection parameter for vector H
+                      NSCARC_VECTOR_HS              = 18, &   !> selection parameter for vector HS
+                      NSCARC_VECTOR_MEASURE         = 19      !> selection parameter for vector Z
 
-INTEGER, PARAMETER :: NSCARC_VECTOR_ONE_X            =  1, &   !> selection parameter for 1-stage vector X
-                      NSCARC_VECTOR_ONE_B            =  2, &   !> selection parameter for 1-stage vector F
-                      NSCARC_VECTOR_ONE_Q            =  3, &   !> selection parameter for 1-stage vector G
-                      NSCARC_VECTOR_ONE_V            =  4, &   !> selection parameter for 1-stage vector D
-                      NSCARC_VECTOR_ONE_W            =  5, &   !> selection parameter for 1-stage vector R
-                      NSCARC_VECTOR_ONE_Y            =  6, &   !> selection parameter for 1-stage vector Y
-                      NSCARC_VECTOR_ONE_Z            =  7, &   !> selection parameter for 1-stage vector Z
-                      NSCARC_VECTOR_ONE_E            =  8, &   !> selection parameter for 1-stage vector Z
-                      NSCARC_VECTOR_TWO_X            =  9, &   !> selection parameter for 2-stage vector X
-                      NSCARC_VECTOR_TWO_B            = 10, &   !> selection parameter for 2-stage vector F
-                      NSCARC_VECTOR_TWO_Q            = 11, &   !> selection parameter for 2-stage vector G
-                      NSCARC_VECTOR_TWO_V            = 12, &   !> selection parameter for 2-stage vector D
-                      NSCARC_VECTOR_TWO_W            = 13, &   !> selection parameter for 2-stage vector R
-                      NSCARC_VECTOR_TWO_Y            = 14, &   !> selection parameter for 2-stage vector Y
-                      NSCARC_VECTOR_TWO_Z            = 15, &   !> selection parameter for 2-stage vector Z
-                      NSCARC_VECTOR_TWO_E            = 16, &   !> selection parameter for 2-stage vector Z
-                      NSCARC_VECTOR_H                = 17, &   !> selection parameter for vector H
-                      NSCARC_VECTOR_HS               = 18, &   !> selection parameter for vector HS
-                      NSCARC_VECTOR_MEASURE          = 19      !> selection parameter for vector Z
+INTEGER, PARAMETER :: NSCARC_MATRIX_CSR             =  1, &   !> matrix in CSR storage format
+                      NSCARC_MATRIX_BANDED          =  2, &   !> matrix in diagonal storage format
+                      NSCARC_MATRIX_FREE            =  3, &   !> matrix in free storage format
+                      NSCARC_MATRIX_CONDENSED       =  4, &   !> matrix condensing for Neumann problems
+                      NSCARC_MATRIX_GENERAL         =  5, &   !> general matrix (not necessarily symmetric)
+                      NSCARC_MATRIX_SYMMETRIC       =  6      !> symmetric matrix
 
-INTEGER, PARAMETER :: NSCARC_MATRIX_CSR              =  1, &   !> matrix in CSR storage format
-                      NSCARC_MATRIX_BANDED           =  2, &   !> matrix in diagonal storage format
-                      NSCARC_MATRIX_FREE             =  3, &   !> matrix in free storage format
-                      NSCARC_MATRIX_CONDENSED        =  4, &   !> matrix condensing for Neumann problems
-                      NSCARC_MATRIX_GENERAL          =  5, &   !> general matrix (not necessarily symmetric)
-                      NSCARC_MATRIX_SYMMETRIC        =  6      !> symmetric matrix
-
-INTEGER, PARAMETER :: NSCARC_ACCURACY_ABSOLUTE       =  1, &   !> absolute accuracy must be reached
-                      NSCARC_ACCURACY_RELATIVE       =  2      !> relative accuracy must be reached
+INTEGER, PARAMETER :: NSCARC_ACCURACY_ABSOLUTE      =  1, &   !> absolute accuracy must be reached
+                      NSCARC_ACCURACY_RELATIVE      =  2      !> relative accuracy must be reached
 
 INTEGER, PARAMETER :: NSCARC_ERROR_PARSE_INPUT       =  1, &   !> wrong input parameter
                       NSCARC_ERROR_MKL_INTERNAL      =  2, &   !> pardiso solver not available
@@ -2158,7 +2157,7 @@ IF (N_MPI_PROCESSES > 1) THEN
    DO NL = NLMIN, NLMAX
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_GRID_INFO, NL)
       CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_CELL_WIDTH, NL)
-      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_WALL_INFO, NL)
+!      CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_WALL_INFO, NL)
    ENDDO
 ENDIF
 
@@ -3327,8 +3326,10 @@ DO IZ = NZ1, NZ2
          ICG  = ICG  + 1
          ICE  = ICE  + 1
 
-         L%WALL(IWG)%ICE(ICPL) = ICE                    !> number of extended grid cell
-         L%WALL(IWG)%ICG(ICPL) = ICG                    !> number of ghost grid cell
+         L%WALL(IWG)%ICE(ICPL)  = ICE                       !> number of extended grid cell
+         L%WALL(IWG)%ICG(ICPL)  = ICG                       !> number of ghost grid cell
+
+WRITE(MSG%LU_DEBUG,*) 'NOM, NM, IX, IY, IZ, IWG, ICE=',NOM, NM, IX, IY, IZ, IWG, ICE
 
          L%MAP%ICE_TO_IWG(ICE)  = IWG                       !> map extended cell to global wall cell
          L%MAP%ICE_TO_IWL(ICE)  = IWL                       !> map extended cell to local wall cell
@@ -4597,6 +4598,7 @@ ELSE IF (L%FACE(IOR0)%N_NEIGHBORS /= 0) THEN
 
       AC%VAL(IP) = AC%VAL(IP) + DSCAL
       AC%COL(IP) = L%WALL(IW)%ICE(1)                   !> store its extended number in matrix column pointers
+WRITE(MSG%LU_DEBUG,*) 'MATRIX_SUBDIAG: IP, IW:', IP, IW, AC%COL(IP)
 
       AC%STENCIL(-IOR0) = AC%VAL(IP)
 
@@ -6455,11 +6457,13 @@ CALL SCARC_DEBUG_LEVEL (NV1, 'A: MATVEC 1 ', NL)
 CALL SCARC_DEBUG_LEVEL (NV2, 'A: MATVEC 2 ', NL)
 #endif
 
+WRITE(MSG%LU_DEBUG,*) 'MATVEC: TYPE_SCOPE =',STACK(NS)%SOLVER%TYPE_SCOPE, NS
 !>
 !> If this call is related to a globally acting solver, exchange internal boundary values of 
 !> vector1 such that the ghost values contain the corresponding overlapped values of adjacent neighbor
 !>
 IF (STACK(NS)%SOLVER%TYPE_SCOPE == NSCARC_SCOPE_GLOBAL) THEN
+WRITE(MSG%LU_DEBUG,*) 'MATVEC: EXCHANGING DUE TO GLOBAL SCOPE'
    TYPE_VECTOR = NV1
    CALL SCARC_EXCHANGE (NSCARC_EXCHANGE_VECTOR, NL)
 ENDIF
@@ -6498,8 +6502,8 @@ SELECT CASE (TYPE_MATRIX)
             DO ICOL = AC%ROW(IC)+1, AC%ROW(IC+1)-1                            !> subdiagonal entries
                JC = AC%COL(ICOL)
                V2(IC) =  V2(IC) + AC%VAL(ICOL)* V1(JC)
-      !         WRITE(MSG%LU_DEBUG,'(A,3i4,3e14.6)') 'IC, ICOL, JC, V1(IC), V2(IC), A(ICOL):', &
-      !                          IC, ICOL, JC, V1(IC), V2(IC), AC%VAL(ICOL)
+               WRITE(MSG%LU_DEBUG,'(A,3i4,3e14.6)') 'IC, ICOL, JC, V1(IC), V2(IC), A(ICOL):', &
+                                IC, ICOL, JC, V1(IC), V2(IC), AC%VAL(ICOL)
 
             ENDDO
          ENDDO
@@ -8176,8 +8180,8 @@ CALL SCARC_DEBUG_LEVEL (V, 'V INIT0', NL)
 
 ICYCLE = SCARC_CYCLING_CONTROL(NSCARC_CYCLING_SETUP, NL)
 
-ITE = 0
-RESIN = SCARC_L2NORM (V, NL)                                          !>  RESIN := ||V||
+ITE    = 0
+RESIN  = SCARC_L2NORM (V, NL)                                         !>  RESIN := ||V||
 NSTATE = SCARC_CONVERGENCE_STATE (0, NL)                              !>  RES < TOL already ??
 
 !> ------------------------------------------------------------------------------------------------
@@ -8398,7 +8402,7 @@ BL2NORM = .TRUE.
 !> Because initial vector is set to zero, this defect corresponds to F
 !> ------------------------------------------------------------------------------------------------
 IF (BMATVEC) THEN
-   CALL SCARC_MATVEC_PRODUCT (X, V, NS, NL)                              !>  V := A*X
+   CALL SCARC_MATVEC_PRODUCT (X, V, NP, NL)                              !>  V := A*X
    CALL SCARC_VECTOR_SUM (B, V, 1.0_EB, -1.0_EB, NL)                     !>  V := B - V
 ENDIF
 
@@ -8427,7 +8431,7 @@ SMOOTH_LOOP: DO ITE=1, NIT
 #endif
 
    CALL SCARC_VECTOR_SUM      (V, X, OMEGA, 1.0_EB, NL)                 !>  X := OMEGA*V + X
-   CALL SCARC_MATVEC_PRODUCT  (X, V, NS, NL)                            !>  V := A*X
+   CALL SCARC_MATVEC_PRODUCT  (X, V, NP, NL)                            !>  V := A*X
 
    CALL SCARC_VECTOR_SUM      (B, V, 1.0_EB, -1.0_EB, NL)               !>  V := B - V
 
@@ -9423,6 +9427,7 @@ RECEIVE_MESH_INDEX: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_WALL_INFO)
 
+WRITE(*,*) 'RECEIVE WALL_INFO'
             N_REQ = N_REQ+1
             CALL MPI_IRECV(OS%RECV_INT(1),SIZE(OS%RECV_INT),MPI_INTEGER,SNODE, &
                            TAG,MPI_COMM_WORLD,REQ(N_REQ),IERROR)
@@ -9592,6 +9597,7 @@ MESH_PACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
          !> ---------------------------------------------------------------------------------------
          CASE (NSCARC_EXCHANGE_WALL_INFO)
 
+WRITE(*,*) 'PACK WALL_INFO'
             IPTR=1
             DO IWL = 1, OL%NWL
                IWG = OL%MAP%IWL_TO_IWG(IWL)
@@ -9855,6 +9861,7 @@ MESH_UNPACK_LOOP: DO NM = LOWER_MESH_INDEX, UPPER_MESH_INDEX
             !> unpack information about neighboring walls
             !> ------------------------------------------------------------------------------------
             CASE (NSCARC_EXCHANGE_WALL_INFO)
+WRITE(*,*) 'UNPACK WALL_INFO'
                IPTR=1
                DO ICG = 1, OL%NCG
                   OL%WALL(ICG)%IXG    = RECV_INT(IPTR    )
